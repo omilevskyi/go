@@ -1,0 +1,39 @@
+---
+name: Check code
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  check-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          show-progress: "false"
+
+      - name: Goimports Check
+        uses: DarthBenro008/goimports-check-action@v0.2.0
+        with:
+          root-path: "./"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: "go.sum"
+          check-latest: true
+          cache: true
+
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1
