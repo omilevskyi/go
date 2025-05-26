@@ -440,27 +440,6 @@ func TestStringByPath(t *testing.T) {
 			path:     "level1.level2.key",
 			expected: "",
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := StringByPath(tt.data, tt.path)
-			if result != tt.expected {
-				t.Errorf("Expected %v, got %v", tt.expected, result)
-			}
-		})
-	}
-}
-
-func TestStringByPath2(t *testing.T) {
-	type testCase struct {
-		name     string
-		data     any
-		path     string
-		expected string
-	}
-
-	tests := []testCase{
 		// Scalar types
 		{"Bool true", map[any]any{"a": true}, "a", "true"},
 		{"Bool false", map[any]any{"a": false}, "a", "false"},
@@ -489,11 +468,11 @@ func TestStringByPath2(t *testing.T) {
 		{"Unsupported type: complex", map[any]any{"a": complex(1, 2)}, "a", ""},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := StringByPath(tc.data, tc.path)
-			if result != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := StringByPath(tt.data, tt.path)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
 		})
 	}

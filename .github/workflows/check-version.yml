@@ -1,9 +1,11 @@
 ---
 name: Check version
+
 on:
   push:
     branches-ignore:
       - "main"
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
