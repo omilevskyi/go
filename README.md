@@ -1,2 +1,1 @@
-# go
-Go language routines
+# Go language routines made for personal use
