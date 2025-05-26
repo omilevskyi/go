@@ -2,3 +2,5 @@
 *.bak*
 *.orig*
 .*/
+coverage.*
+Makefile
