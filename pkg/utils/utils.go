@@ -128,9 +128,8 @@ func EnQQ(s string) string {
 	return string(Quote) + s + string(Quote)
 }
 
-// Compact returns a new slice with all empty strings removed.
+// Compact returns the passed slice with all empty strings removed.
 func Compact(slice []string) []string {
-	// return deleteItems(slice, "")
 	if len(slice) > 0 {
 		deleteItemsInPlace(&slice, "")
 		if len(slice) > 0 {
@@ -140,8 +139,38 @@ func Compact(slice []string) []string {
 	return nil
 }
 
+// It seems to be faster, but not safer.
+// P.S. There was also some doubt about cutting a slice passed by value to the Compact() function.
+//
+// --- FAIL: TestNewAlias (0.00s)
+//
+//	--- FAIL: TestNewAlias/Nested_keys_with_comments (0.00s)
+//		alias_test.go:533:
+//			AltNewAlias() = &{map[key1:{                    }] map[key1:comment 1 key1+key2:comment 2 key1+key2+key2+key3:comment 3]}, <nil>,
+//		             want &{map[key1:{                    }] map[key1:comment 1 key1+key2:comment 2 key1+key2+key3:comment 3]}, <nil>
+func deleteItemsInPlace[T comparable](slicePtr *[]T, targets ...T) { // nolint:unused
+	if slicePtr != nil {
+		s, slen, j := *slicePtr, len(*slicePtr), 0
+		for i := 0; i < slen; i++ {
+			if !slices.Contains(targets, s[i]) {
+				s[j] = s[i]
+				j++
+			}
+		}
+		*slicePtr = s[:j]
+	}
+}
+
+// CompactNew returns a new slice with all empty strings removed.
+func CompactNew(slice []string) []string {
+	if len(slice) > 0 {
+		return deleteItems(slice, "")
+	}
+	return nil
+}
+
 // deleteItems returns a new slice with specified target elements removed.
-func deleteItems[T comparable](slice []T, targets ...T) []T { // nolint:unused
+func deleteItems[T comparable](slice []T, targets ...T) []T {
 	slen := len(slice)
 	if slen < 1 {
 		return nil
@@ -160,22 +189,6 @@ func deleteItems[T comparable](slice []T, targets ...T) []T { // nolint:unused
 		}
 	}
 	return result
-}
-
-// The previous implementation of the function is provided as a reference example
-// It seems to be faster, but not safer.
-// P.S. There was also some doubt about updating a slice passed by value to the Compact() function.
-func deleteItemsInPlace[T comparable](slicePtr *[]T, targets ...T) { // nolint:unused
-	if slicePtr != nil {
-		s, slen, j := *slicePtr, len(*slicePtr), 0
-		for i := 0; i < slen; i++ {
-			if !slices.Contains(targets, s[i]) {
-				s[j] = s[i]
-				j++
-			}
-		}
-		*slicePtr = s[:j]
-	}
 }
 
 // Distinct returns a new slice with duplicate elements removed, preserving the original order.
