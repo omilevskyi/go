@@ -2,6 +2,7 @@ package utils
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -252,7 +253,7 @@ func TestDeleteItemsInPlace(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("deleteItemsInPlace()/"+tt.name, func(t *testing.T) {
 			if tt.skip { // just check that it doesn't panic
 				var nilPtr *[]string = nil
 				deleteItemsInPlace(nilPtr, tt.targets...)
@@ -267,6 +268,63 @@ func TestDeleteItemsInPlace(t *testing.T) {
 			deleteItemsInPlace(&inputCopy, tt.targets...)
 			if !reflect.DeepEqual(inputCopy, tt.expected) {
 				t.Errorf("Expected %v, got %v", tt.expected, inputCopy)
+			}
+		})
+	}
+}
+
+func TestDeleteItems(t *testing.T) {
+	type testCase[T comparable] struct {
+		name     string
+		input    []T
+		targets  []T
+		expected []T
+	}
+
+	intTests := []testCase[int]{
+		{"Empty slice", []int{}, []int{1}, nil},
+		{"No targets", []int{1, 2, 3}, nil, []int{1, 2, 3}},
+		{"Remove one", []int{1, 2, 3}, []int{2}, []int{1, 3}},
+		{"Remove multiple", []int{1, 2, 3, 4}, []int{2, 4}, []int{1, 3}},
+		{"Remove all", []int{1, 1, 1}, []int{1}, []int{}},
+		{"Duplicates in input", []int{1, 2, 2, 3}, []int{2}, []int{1, 3}},
+		{"Duplicates in targets", []int{1, 2, 3}, []int{2, 2}, []int{1, 3}},
+	}
+
+	stringTests := []testCase[string]{
+		{"Remove string", []string{"a", "b", "c"}, []string{"b"}, []string{"a", "c"}},
+		{"Remove multiple strings", []string{"a", "b", "c", "d"}, []string{"a", "d"}, []string{"b", "c"}},
+		{"Remove nothing", []string{"a", "b"}, []string{"x"}, []string{"a", "b"}},
+	}
+
+	type MyInt int
+	customTests := []testCase[MyInt]{
+		{"Custom type", []MyInt{1, 2, 3}, []MyInt{2}, []MyInt{1, 3}},
+	}
+
+	for _, tc := range intTests {
+		t.Run("int/"+tc.name, func(t *testing.T) {
+			result := deleteItems(tc.input, tc.targets...)
+			if !slices.Equal(result, tc.expected) {
+				t.Errorf("Expected %v, got %v", tc.expected, result)
+			}
+		})
+	}
+
+	for _, tc := range stringTests {
+		t.Run("string/"+tc.name, func(t *testing.T) {
+			result := deleteItems(tc.input, tc.targets...)
+			if !slices.Equal(result, tc.expected) {
+				t.Errorf("Expected %v, got %v", tc.expected, result)
+			}
+		})
+	}
+
+	for _, tc := range customTests {
+		t.Run("custom/"+tc.name, func(t *testing.T) {
+			result := deleteItems(tc.input, tc.targets...)
+			if !slices.Equal(result, tc.expected) {
+				t.Errorf("Expected %v, got %v", tc.expected, result)
 			}
 		})
 	}
