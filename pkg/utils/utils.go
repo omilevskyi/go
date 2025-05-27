@@ -26,7 +26,11 @@ func IsErr(err error, rc int, slice ...string) bool {
 	if msg == "" {
 		msg = "ERROR"
 	}
-	_, _ = fmt.Fprintf(os.Stderr, "%s:%d %s: %v\n", filepath.Base(f.File), f.Line, msg, err)
+	fname := ""
+	if f.Function != "" {
+		fname = f.Function[strings.LastIndex(f.Function, ".")+1:] + "(): "
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "%s:%d %s%s: %v\n", filepath.Base(f.File), f.Line, fname, msg, err)
 	if rc > 0 {
 		os.Exit(rc)
 	}
