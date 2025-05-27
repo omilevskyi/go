@@ -50,6 +50,17 @@ func CallSite() string {
 	return s
 }
 
+// Fringerr wraps an error with file name, line number, and function name.
+func Fringerr(e error) error {
+	pc := make([]uintptr, 15)
+	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
+	s := filepath.Base(f.File) + ":" + strconv.Itoa(f.Line)
+	if f.Function != "" {
+		s += " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
+	}
+	return fmt.Errorf("%s: %w", s, e)
+}
+
 // Keys returns a slice containing all the keys from the given map.
 func Keys[K comparable, V any](m map[K]V) []K {
 	if i := len(m); i > 0 {
