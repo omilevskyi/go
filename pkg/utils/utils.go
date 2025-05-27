@@ -37,7 +37,11 @@ func IsErr(err error, rc int, slice ...string) bool {
 func CallSite() string {
 	pc := make([]uintptr, 15)
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
-	return filepath.Base(f.File) + ":" + strconv.Itoa(f.Line)
+	s := filepath.Base(f.File) + ":" + strconv.Itoa(f.Line)
+	if f.Function != "" {
+		s += " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
+	}
+	return s
 }
 
 // Keys returns a slice containing all the keys from the given map.
