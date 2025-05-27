@@ -62,8 +62,8 @@ func Arrange(s []string) []string {
 	return nil
 }
 
-// ArrangeNew sorts a slice of strings in ascending order; the returned slice is a new slice.
-func ArrangeNew(s []string) []string {
+// ArrangeCopy sorts a slice of strings in ascending order; the returned slice is a new slice.
+func ArrangeCopy(s []string) []string {
 	if slen := len(s); slen > 0 {
 		result := make([]string, slen)
 		copy(result, s)
@@ -84,15 +84,15 @@ func ArrangB(s [][]byte) [][]byte {
 	return nil
 }
 
-// ArrangBNew sorts a slice of []byte in ascending order; the returned slice is a new slice.
-func ArrangBNew(s [][]byte) [][]byte {
+// ArrangBCopy sorts a slice of []byte in ascending order; the returned slice is a new slice.
+func ArrangBCopy(s [][]byte) [][]byte {
 	if slen := len(s); slen > 0 {
 		result := make([][]byte, slen)
 		copy(result, s)
 		sort.Slice(result, func(i, j int) bool {
 			return bytes.Compare(s[i], s[j]) < 0
 		})
-		return s
+		return result
 	}
 	return nil
 }
@@ -110,28 +110,10 @@ func ArrangBNew(s [][]byte) [][]byte {
 // 	return slice
 // }
 
-// TrimExt removes the file extension from a filename.
-func TrimExt(filename string) string {
-	return strings.TrimSuffix(filename, filepath.Ext(filename))
-}
-
-// TrimQQ removes surrounding quote characters from a string if present.
-func TrimQQ(s string) string {
-	if slen := len(s); slen > 1 && s[0] == Quote && s[slen-1] == Quote {
-		return s[1 : slen-1]
-	}
-	return s
-}
-
-// EnQQ encloses a string in quote characters.
-func EnQQ(s string) string {
-	return string(Quote) + s + string(Quote)
-}
-
 // Compact returns the passed slice with all empty strings removed.
 func Compact(slice []string) []string {
 	if len(slice) > 0 {
-		deleteItemsInPlace(&slice, "")
+		deleteItems(&slice, "")
 		if len(slice) > 0 {
 			return slice
 		}
@@ -148,7 +130,7 @@ func Compact(slice []string) []string {
 //		alias_test.go:533:
 //			AltNewAlias() = &{map[key1:{                    }] map[key1:comment 1 key1+key2:comment 2 key1+key2+key2+key3:comment 3]}, <nil>,
 //		             want &{map[key1:{                    }] map[key1:comment 1 key1+key2:comment 2 key1+key2+key3:comment 3]}, <nil>
-func deleteItemsInPlace[T comparable](slicePtr *[]T, targets ...T) { // nolint:unused
+func deleteItems[T comparable](slicePtr *[]T, targets ...T) {
 	if slicePtr != nil {
 		s, slen, j := *slicePtr, len(*slicePtr), 0
 		for i := 0; i < slen; i++ {
@@ -157,41 +139,42 @@ func deleteItemsInPlace[T comparable](slicePtr *[]T, targets ...T) { // nolint:u
 				j++
 			}
 		}
-		*slicePtr = s[:j]
+		*slicePtr = s[:j] // It is better to add 'if j == 0 { *slicePtr = nil }', but deleteItems() is private and is used by Compact() only.
 	}
 }
 
-// CompactNew returns a new slice with all empty strings removed.
-func CompactNew(slice []string) []string {
+// CompactCopy returns a new slice with all empty strings removed.
+func CompactCopy(slice []string) []string {
 	if len(slice) > 0 {
-		return deleteItems(slice, "")
+		return deleteItemsCopy(slice, "")
 	}
 	return nil
 }
 
-// deleteItems returns a new slice with specified target elements removed.
-func deleteItems[T comparable](slice []T, targets ...T) []T {
-	slen := len(slice)
-	if slen < 1 {
-		return nil
-	}
-	j := 0
-	for i := 0; i < slen; i++ {
-		if !slices.Contains(targets, slice[i]) {
-			j++
+// deleteItemsCopy returns a new slice with specified target elements removed.
+func deleteItemsCopy[T comparable](slice []T, targets ...T) []T {
+	if slen := len(slice); slen > 0 {
+		j := 0
+		for i := 0; i < slen; i++ {
+			if !slices.Contains(targets, slice[i]) {
+				j++
+			}
+		}
+		if j > 0 {
+			result := make([]T, j)
+			for i := slen - 1; i >= 0; i-- {
+				if !slices.Contains(targets, slice[i]) {
+					j--
+					result[j] = slice[i]
+				}
+			}
+			return result
 		}
 	}
-	result := make([]T, j)
-	for i := slen - 1; i >= 0; i-- {
-		if !slices.Contains(targets, slice[i]) {
-			j--
-			result[j] = slice[i]
-		}
-	}
-	return result
+	return nil
 }
 
-// Distinct returns a new slice with duplicate elements removed, preserving the original order.
+// Distinct returns the passed slice with duplicate elements removed, preserving the original order.
 func Distinct[T comparable](slice []T) []T {
 	if slen := len(slice); slen > 0 {
 		seen, j := make(map[T]struct{}, slen), 0
@@ -204,9 +187,47 @@ func Distinct[T comparable](slice []T) []T {
 				j++
 			}
 		}
-		return slice[:j]
+		if j > 0 {
+			return slice[:j]
+		}
 	}
 	return []T(nil)
+}
+
+// DistinctCopy returns a new slice with duplicate elements removed, preserving the original order.
+func DistinctCopy[T comparable](slice []T) []T {
+	if slen := len(slice); slen > 0 {
+		result, seen, j := make([]T, slen), make(map[T]struct{}, slen), 0
+		for i := 0; i < slen; i++ {
+			if _, ok := seen[slice[i]]; !ok {
+				seen[slice[i]] = struct{}{}
+				result[j] = slice[i]
+				j++
+			}
+		}
+		if j > 0 {
+			return result[:j]
+		}
+	}
+	return nil
+}
+
+// TrimExt removes the file extension from a filename.
+func TrimExt(filename string) string {
+	return strings.TrimSuffix(filename, filepath.Ext(filename))
+}
+
+// TrimQQ removes surrounding quote characters from a string if present.
+func TrimQQ(s string) string {
+	if slen := len(s); slen > 1 && s[0] == Quote && s[slen-1] == Quote {
+		return s[1 : slen-1]
+	}
+	return s
+}
+
+// EnQQ encloses a string in quote characters.
+func EnQQ(s string) string {
+	return string(Quote) + s + string(Quote)
 }
 
 // IntToLetter maps an integer to a letter (a–z, A–Z) in a cyclic manner.
