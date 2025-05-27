@@ -12,24 +12,27 @@ import (
 	"strings"
 )
 
+const nl = "\n"
+
 // Quote character for TrimQQ() and EnQQ()
 var Quote byte = '"'
 
 // IsErr checks if an error is non-nil, logs it with source location and optional context,
 // and optionally exits the program with the given return code.
+// filename.go:line optionalFunctionName(): optionalMessage: error
 func IsErr(err error, rc int, slice ...string) bool {
 	if err == nil {
 		return false
 	}
 	pc, msg, fname := make([]uintptr, 15), strings.Join(slice, ""), ""
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
-	if msg == "" {
-		msg = "ERROR"
+	if len(slice) < 1 && f.Function != "" {
+		fname = " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
 	}
-	if f.Function != "" {
-		fname = f.Function[strings.LastIndex(f.Function, ".")+1:] + "(): "
+	if msg != "" {
+		msg += ": "
 	}
-	_, _ = fmt.Fprintf(os.Stderr, "%s:%d %s%s: %v\n", filepath.Base(f.File), f.Line, fname, msg, err)
+	_, _ = fmt.Fprint(os.Stderr, filepath.Base(f.File), ":", f.Line, fname, ": ", msg, err, nl)
 	if rc > 0 {
 		os.Exit(rc)
 	}
