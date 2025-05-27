@@ -21,12 +21,11 @@ func IsErr(err error, rc int, slice ...string) bool {
 	if err == nil {
 		return false
 	}
-	pc, msg := make([]uintptr, 15), strings.Join(slice, "")
+	pc, msg, fname := make([]uintptr, 15), strings.Join(slice, ""), ""
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
 	if msg == "" {
 		msg = "ERROR"
 	}
-	fname := ""
 	if f.Function != "" {
 		fname = f.Function[strings.LastIndex(f.Function, ".")+1:] + "(): "
 	}
