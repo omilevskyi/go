@@ -12,27 +12,34 @@ import (
 	"strings"
 )
 
-const nl = "\n"
+const (
+	funcBrackets = "()"
+	nl           = "\n"
+)
 
 // Quote character for TrimQQ() and EnQQ()
-var Quote byte = '"'
+var (
+	Quote       byte = '"'
+	FileSepLine byte = '#'
+)
 
 // IsErr checks if an error is non-nil, logs it with source location and optional context,
 // and optionally exits the program with the given return code.
 // filename.go:line optionalFunctionName(): optionalMessage: error
-func IsErr(err error, rc int, slice ...string) bool {
+func IsErr(err error, rc int, slice ...any) bool {
 	if err == nil {
 		return false
 	}
-	pc, msg, fname := make([]uintptr, 15), strings.Join(slice, ""), ""
+	pc, pre, msg, post := make([]uintptr, 15), string([]byte(nil)), string([]byte(nil)), string([]byte(nil))
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
-	if len(slice) < 1 && f.Function != "" {
-		fname = " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
+	if len(slice) > 0 {
+		if msg = fmt.Sprint(slice...); msg != "" {
+			pre = " "
+		} else if msg = f.Function[strings.LastIndex(f.Function, ".")+1:]; msg != "" {
+			pre, post = " ", funcBrackets
+		}
 	}
-	if msg != "" {
-		msg += ": "
-	}
-	_, _ = fmt.Fprint(os.Stderr, filepath.Base(f.File), ":", f.Line, fname, ": ", msg, err, nl)
+	_, _ = fmt.Fprint(os.Stderr, filepath.Base(f.File), string(FileSepLine), f.Line, pre, msg, post, ": ", err, nl)
 	if rc > 0 {
 		os.Exit(rc)
 	}
@@ -43,9 +50,9 @@ func IsErr(err error, rc int, slice ...string) bool {
 func CallSite() string {
 	pc := make([]uintptr, 15)
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
-	s := filepath.Base(f.File) + ":" + strconv.Itoa(f.Line)
+	s := filepath.Base(f.File) + string(FileSepLine) + strconv.Itoa(f.Line)
 	if f.Function != "" {
-		s += " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
+		s += " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + funcBrackets
 	}
 	return s
 }
@@ -54,11 +61,11 @@ func CallSite() string {
 func Fringerr(e error) error {
 	pc := make([]uintptr, 15)
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
-	s := filepath.Base(f.File) + ":" + strconv.Itoa(f.Line)
-	if f.Function != "" {
-		s += " " + f.Function[strings.LastIndex(f.Function, ".")+1:] + "()"
+	pre, fn, post := " ", f.Function[strings.LastIndex(f.Function, ".")+1:], funcBrackets
+	if fn == "" {
+		pre, post = string([]byte(nil)), string([]byte(nil))
 	}
-	return fmt.Errorf("%s: %w", s, e)
+	return fmt.Errorf("%s%c%d%s%s%s: %w", filepath.Base(f.File), FileSepLine, f.Line, pre, fn, post, e)
 }
 
 // Keys returns a slice containing all the keys from the given map.
