@@ -268,3 +268,94 @@ func IntToLetter(num int) rune {
 	}
 	return rune(syms[num%len(syms)])
 }
+
+// FlagValue extracts the value of a --flag from args (either as --flag value	or --flag=value),
+// and clears the matched arguments to prevent further processing.
+func FlagValue(args []string, flag string) string {
+	result, slen, flen := "", len(args), len(flag)+2
+	for i := 1; i < slen; i++ {
+		if alen := len(args[i]); alen > 1 && args[i][0] == '-' && args[i][1] == '-' {
+			switch {
+			case alen == flen && args[i][2:] == flag && i+1 < slen:
+				args[i] = ""
+				i++
+				result = args[i] // --flag
+				args[i] = ""
+			case alen > flen && args[i][flen] == '=' && strings.HasPrefix(args[i][2:], flag):
+				result = args[i][flen+1:] // --flag=value
+				args[i] = ""
+			}
+		}
+	}
+	return result
+}
+
+// Uints extract all unsigned integer numbers from a given string and return them as a slice of uint
+func Uints(s string) []uint {
+	n, inNumber := uint(0), false
+	for _, r := range s {
+		if '0' <= r && r <= '9' {
+			if !inNumber {
+				n++
+				inNumber = true
+			}
+		} else {
+			inNumber = false
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	nums := make([]uint, 0, n)
+	n, inNumber = 0, false
+	for _, r := range s {
+		if '0' <= r && r <= '9' {
+			n, inNumber = n*10+uint(r-'0'), true
+		} else if inNumber {
+			nums = append(nums, n)
+			n, inNumber = 0, false
+		}
+	}
+	if inNumber {
+		nums = append(nums, n)
+	}
+	return nums
+}
+
+// IsGitHash checks whether a string resembles a Git commit hash.
+func IsGitHash(s string) bool {
+	if length := len(s); length < 7 || length > 40 {
+		return false
+	}
+	for _, r := range s {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+// IsLessByNums determines if one string is numerically less than another based on the order of numbers extracted from each
+func IsLessByNums(a, b string) bool {
+	if a != b {
+		if IsGitHash(a) {
+			return true
+		}
+		aNums, bNums := Uints(a), Uints(b)
+		aLen, bLen, aVal, bVal := len(aNums), len(bNums), uint(0), uint(0)
+		for i := 0; i < max(aLen, bLen); i++ {
+			if aVal = 0; i < aLen {
+				aVal = aNums[i]
+			}
+			if bVal = 0; i < bLen {
+				bVal = bNums[i]
+			}
+			if aVal < bVal {
+				return true
+			} else if aVal > bVal {
+				return false
+			}
+		}
+	}
+	return false
+}
