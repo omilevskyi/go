@@ -503,3 +503,185 @@ func TestTrimQQ(t *testing.T) {
 		})
 	}
 }
+
+func TestFlagValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		flag     string
+		expected string
+	}{
+		{"flag with space", []string{"cmd", "--config", "file.yaml"}, "config", "file.yaml"},
+		{"flag with equals", []string{"cmd", "--config=file.yaml"}, "config", "file.yaml"},
+
+		{"flag in middle", []string{"cmd", "--other", "x", "--config", "file.yaml", "--more", "y"}, "config", "file.yaml"},
+		{"flag at end", []string{"cmd", "--other", "x", "--config", "file.yaml"}, "config", "file.yaml"},
+
+		{"multiple flags, first wins", []string{"cmd", "--config", "first.yaml", "--config", "second.yaml"}, "config", "second.yaml"},
+		{"multiple equals flags, first wins", []string{"cmd", "--config=first.yaml", "--config=second.yaml"}, "config", "second.yaml"},
+
+		{"flag with empty value", []string{"cmd", "--config", ""}, "config", ""},
+		{"flag with equals empty", []string{"cmd", "--config="}, "config", ""},
+
+		{"flag with no value", []string{"cmd", "--config"}, "config", ""},
+		{"flag not present", []string{"cmd", "--other", "value"}, "config", ""},
+		{"flag prefix only", []string{"cmd", "--configfile"}, "config", ""},
+		{"flag equals prefix only", []string{"cmd", "--configfile=value"}, "config", ""},
+
+		{"flag similar name", []string{"cmd", "--configx", "value"}, "config", ""},
+		{"flag similar equals", []string{"cmd", "--configx=value"}, "config", ""},
+
+		{"empty args", []string{}, "config", ""},
+		{"only program name", []string{"cmd"}, "config", ""},
+		{"short flag ignored", []string{"cmd", "-config", "file.yaml"}, "config", ""},
+		{"single dash with equals", []string{"cmd", "-config=file.yaml"}, "config", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := FlagValue(tt.args, tt.flag)
+			if result != tt.expected {
+				t.Errorf("got %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestUints(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []uint
+	}{
+		{"", nil},
+		{"abc", nil},
+		{"123", []uint{123}},
+		{"abc123", []uint{123}},
+		{"123abc", []uint{123}},
+		{"abc123def", []uint{123}},
+		{"abc123def456", []uint{123, 456}},
+		{"0", []uint{0}},
+		{"000123", []uint{123}},
+		{"12 34 56", []uint{12, 34, 56}},
+		{"12abc34def56", []uint{12, 34, 56}},
+		{"1a2b3c", []uint{1, 2, 3}},
+		{"1.2.3", []uint{1, 2, 3}},
+		{"1,2,3", []uint{1, 2, 3}},
+		{"  123  ", []uint{123}},
+	}
+
+	for _, test := range tests {
+		result := Uints(test.input)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("uints(%q) = %v; want %v", test.input, result, test.expected)
+		}
+	}
+}
+
+func TestIsGitHash(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		// Valid hashes
+		{"a1b2c3d", true}, // 7 chars
+		{"0123456789abcdef0123456789abcdef01234567", true}, // 40 chars
+		{"deadbeef", true},
+		{"1234567", true},
+		{"abcdef0", true},
+
+		// Invalid due to length
+		{"123456", false}, // too short
+		{"0123456789abcdef0123456789abcdef012345678", false}, // 41 chars
+
+		// Invalid characters
+		{"g123456", false}, // 'g' is not hex
+		{"12345z7", false}, // 'z' is not hex
+		{"12345_7", false}, // '_' is not hex
+		{"ABCDEF1", false}, // uppercase not allowed
+
+		// Edge cases
+		{"", false},
+		{"ffffffffffffffffffffffffffffffffffffffff", true}, // all 'f's
+		{"0000000", true}, // all '0's
+	}
+
+	for _, test := range tests {
+		result := IsGitHash(test.input)
+		if result != test.expected {
+			t.Errorf("isGitHash(%q) = %v; want %v", test.input, result, test.expected)
+		}
+	}
+}
+
+func TestIsLessByNums(t *testing.T) {
+	tests := []struct {
+		a, b     string
+		expected bool
+	}{
+		// Identical strings
+		{"abc123", "abc123", false},
+
+		// Git commit hash handling
+		{"a1b2c3d", "abc123", true}, // a is a git hash
+		{"abc123", "a1b2c3d", false},
+		{"deadbeef", "1234567", true},
+		{"123456G", "deadbeef", false},
+		{"abcdef0", "abcdef0", false},
+
+		// Numeric comparison
+		{"file1", "file2", true},
+		{"file2", "file1", false},
+		{"file10", "file2", false},
+		{"file2", "file10", true},
+		{"v1.2.3", "v1.2.4", true},
+		{"v1.2.10", "v1.2.4", false},
+		{"v1.2.3", "v1.2.3", false},
+
+		// Different number of numeric components
+		{"v1.2", "v1.2.1", true},
+		{"v1.2.1", "v1.2", false},
+		{"v1.2.0", "v1.2", false}, // trailing zero
+
+		// No numbers
+		{"abc", "def", false},
+		{"abc", "abc", false},
+
+		// Mixed characters and numbers
+		{"a1b2c3", "a1b2c4", true},
+		{"a1b2c4", "a1b2c3", false},
+		{"a1b2c3", "a1b2c3", false},
+
+		// Leading zeros
+		{"file001", "file1", false},
+		{"file1", "file001", false},
+
+		// Empty strings
+		{"", "", false},
+		{"", "abc123", true},
+		{"abc123", "", false},
+
+		// Git hash vs Git hash
+		{"abcdef1", "abcdef2", true},
+		{"abcde.2", "abcde.1", false},
+		{"abcdef1", "abcdef1", false},
+
+		// Git hash vs longer string with numbers
+		{"abcdef1", "version123", true},
+		{"version123", "abcdef1", false},
+
+		// Long numeric sequences
+		{"a1234567890", "a1234567891", true},
+		{"v1234567891", "v1234567890", false},
+
+		// Non-hex characters in non-hash strings
+		{"abc123!", "abc123", false},
+		{"abc123", "abc123!", false},
+	}
+
+	for _, test := range tests {
+		result := IsLessByNums(test.a, test.b)
+		if result != test.expected {
+			t.Errorf("isLessByNums(%q, %q) = %v; want %v", test.a, test.b, result, test.expected)
+		}
+	}
+}
