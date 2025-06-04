@@ -359,3 +359,19 @@ func IsLessByNums(a, b string) bool {
 	}
 	return false
 }
+
+// ToUpperASCII -
+func ToUpperASCII(b byte) byte {
+	if 'a' <= b && b <= 'z' {
+		return b - ('a' - 'A')
+	}
+	return b
+}
+
+// ToLowerASCII -
+func ToLowerASCII(b byte) byte {
+	if 'A' <= b && b <= 'Z' {
+		return b + ('a' - 'A')
+	}
+	return b
+}
