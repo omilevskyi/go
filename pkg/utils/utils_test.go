@@ -685,3 +685,104 @@ func TestIsLessByNums(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchSubstring(t *testing.T) {
+	tests := []struct {
+		name     string
+		s        string
+		slice    []string
+		expected string
+	}{
+		{
+			name:     "Single match",
+			s:        "hello world",
+			slice:    []string{"world", "planet"},
+			expected: "world",
+		},
+		{
+			name:     "Multiple matches, return first",
+			s:        "hello world",
+			slice:    []string{"world", "hello"},
+			expected: "world",
+		},
+		{
+			name:     "No match",
+			s:        "hello world",
+			slice:    []string{"planet", "galaxy"},
+			expected: "",
+		},
+		{
+			name:     "Empty string input",
+			s:        "",
+			slice:    []string{"a", "b"},
+			expected: "",
+		},
+		{
+			name:     "Empty slice",
+			s:        "hello",
+			slice:    []string{},
+			expected: "",
+		},
+		{
+			name:     "Empty strings in slice",
+			s:        "hello",
+			slice:    []string{"", "he"},
+			expected: "", // "" is technically a substring, but we skip it here
+		},
+		{
+			name:     "Case sensitivity",
+			s:        "Hello World",
+			slice:    []string{"world", "Hello"},
+			expected: "Hello",
+		},
+		{
+			name:     "Duplicate entries",
+			s:        "repeat repeat",
+			slice:    []string{"repeat", "repeat"},
+			expected: "repeat",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ContainedSubstring(tt.s, tt.slice)
+			if result != tt.expected {
+				t.Errorf("MatchSubstring(%q, %v) = %q; want %q", tt.s, tt.slice, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTrimUpToRune(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		target rune
+		want   string
+	}{
+		{"empty string", "", ':', ""},
+		{"no target rune", "hello world", ':', "hello world"},
+		{"target at start", ":hello", ':', "hello"},
+		{"target in middle", "abc:def", ':', "def"},
+		{"target at end", "abc:", ':', ""},
+		{"multiple targets", "abc::def", ':', ":def"},
+		{"multiple targets at start", "::hello", ':', ":hello"},
+		{"only target", ":", ':', ""},
+		{"only targets", "::::", ':', ":::"},
+		{"unicode with target", "привет:мир", ':', "мир"},
+		{"unicode no target", "привет мир", ':', "привет мир"},
+		{"target is unicode", "abc★def", '★', "def"},
+		{"target is space", "abc def", ' ', "def"},
+		{"target is tab", "abc\tdef", '\t', "def"},
+		{"target is emoji", "hello🌟world", '🌟', "world"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := TrimUpToRune(tt.input, tt.target)
+			if got != tt.want {
+				t.Errorf("trimUpToRune(%q, %q) = %q; want %q", tt.input, tt.target, got, tt.want)
+			}
+		})
+	}
+}
