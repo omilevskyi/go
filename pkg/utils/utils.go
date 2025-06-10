@@ -375,3 +375,28 @@ func ToLowerASCII(b byte) byte {
 	}
 	return b
 }
+
+// ContainedSubstring returns first string from slice that is substring of string s
+func ContainedSubstring(s string, slice []string) string {
+	for i := 0; i < len(slice); i++ {
+		if strings.Contains(s, slice[i]) {
+			return slice[i]
+		}
+	}
+	return ""
+}
+
+// TrimUpToRune trims everything up to and including first occurrence of specific rune
+func TrimUpToRune(s string, target rune) string {
+	found := false
+	for i, r := range s {
+		if found {
+			return s[i:]
+		}
+		found = r == target
+	}
+	if found {
+		return ""
+	}
+	return s
+}
