@@ -141,25 +141,25 @@ func TestAnyByPath(t *testing.T) {
 			name:     "Array element field",
 			path:     "service.component[0].name",
 			expected: "auth",
-			fullPath: "service.component[0].name",
+			fullPath: "service.component.[0].name",
 		},
 		{
 			name:     "Array element dotted field",
 			path:     "service.component.[0].name",
 			expected: "auth",
-			fullPath: "service.component[0].name",
+			fullPath: "service.component.[0].name",
 		},
 		{
 			name:     "Second array element field",
 			path:     ".service.component[1].port",
 			expected: 5432,
-			fullPath: "service.component[1].port",
+			fullPath: "service.component.[1].port",
 		},
 		{
 			name:     "Array element as root",
 			path:     "service..component[1]",
 			expected: map[any]any{"name": "db", "port": 5432},
-			fullPath: "service.component[1]",
+			fullPath: "service.component.[1]",
 		},
 		{
 			name:     "Invalid path (nonexistent key)",
@@ -288,38 +288,6 @@ func TestSearchKeys(t *testing.T) {
 			result := Arrange(SearchKeys(tt.data, tt.predicate))
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("searchKeys(...) = %v; want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestKeyAndIndex(t *testing.T) {
-	tests := []struct {
-		input         string
-		expectedKey   string
-		expectedIndex int
-	}{
-		{"key[0]", "key", 0},
-		{"key[123]", "key", 123},
-		{"key[-1]", "key", -1},
-		{"key[999999]", "key", 999999},
-		{"key[abc]", "", -1},
-		{"key[", "", -1},
-		{"key]", "", -1},
-		{"key", "", -1},
-		{"[0]", "", 0},
-		{"", "", -1},
-		{"key[[2]", "key[", 2},
-		{"key[0][1]", "key", 0},    // ?
-		{"key[0]extra", "key", 0},  // ?
-		{"key[0][1][2]", "key", 0}, // ?
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			key, index := keyAndIndex(tt.input)
-			if key != tt.expectedKey || index != tt.expectedIndex {
-				t.Errorf("keyAndIndex(%q) = (%q, %d), want (%q, %d)", tt.input, key, index, tt.expectedKey, tt.expectedIndex)
 			}
 		})
 	}
@@ -473,6 +441,92 @@ func TestStringByPath(t *testing.T) {
 			result := StringByPath(tt.data, tt.path)
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestSplitOnTokens(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "Simple path",
+			input:    "a.b.c",
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name:     "Path with indices",
+			input:    "a[0].b[12].c",
+			expected: []string{"a", "[0]", "b", "[12]", "c"},
+		},
+		{
+			name:     "Leading and trailing dots",
+			input:    ".a.b.c.",
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name:     "Consecutive dots",
+			input:    "a..b...c",
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name:     "Only index",
+			input:    "[42]",
+			expected: []string{"[42]"},
+		},
+		{
+			name:     "Index at start",
+			input:    "[1].a.b",
+			expected: []string{"[1]", "a", "b"},
+		},
+		{
+			name:     "Index at end",
+			input:    "a.b[3]",
+			expected: []string{"a", "b", "[3]"},
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "Only dots",
+			input:    "...",
+			expected: nil,
+		},
+		{
+			name:     "Unclosed index",
+			input:    "a.b[123",
+			expected: []string{"a", "b", "[123"},
+		},
+		{
+			name:     "Unopened index",
+			input:    "a.b123]",
+			expected: []string{"a", "b123]"},
+		},
+		{
+			name:     "Nested brackets (invalid but tolerated)",
+			input:    "a[[1]].b",
+			expected: []string{"a", "[[1]]", "b"},
+		},
+		{
+			name:     "Mixed valid and invalid",
+			input:    "a.b[1].c[2",
+			expected: []string{"a", "b", "[1]", "c", "[2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var actual []string
+			for token := range SplitOnTokens(tt.input) {
+				actual = append(actual, token)
+			}
+			if !reflect.DeepEqual(actual, tt.expected) {
+				t.Errorf("SplitOnTokens(%q) = %v; want %v", tt.input, actual, tt.expected)
 			}
 		})
 	}
