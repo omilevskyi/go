@@ -30,7 +30,7 @@ func IsErr(err error, rc int, slice ...any) bool {
 	if err == nil {
 		return false
 	}
-	pc, pre, msg, post := make([]uintptr, 15), string([]byte(nil)), string([]byte(nil)), string([]byte(nil))
+	pc, pre, msg, post := make([]uintptr, 15), "", "", ""
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
 	if len(slice) > 0 {
 		if msg = fmt.Sprint(slice...); msg != "" {
@@ -63,7 +63,7 @@ func Fringerr(e error) error {
 	f, _ := runtime.CallersFrames(pc[:runtime.Callers(2, pc)]).Next()
 	pre, fn, post := " ", f.Function[strings.LastIndex(f.Function, ".")+1:], funcBrackets
 	if fn == "" {
-		pre, post = string([]byte(nil)), string([]byte(nil))
+		pre, post = "", ""
 	}
 	return fmt.Errorf("%s%c%d%s%s%s: %w", filepath.Base(f.File), FileSepLine, f.Line, pre, fn, post, e)
 }
