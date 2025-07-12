@@ -400,3 +400,20 @@ func TrimUpToRune(s string, target rune) string {
 	}
 	return s
 }
+
+// RootDirectory returns the root directory of the current filesystem
+// by traversing upward from the current working directory until it
+// reaches a directory whose parent is itself (i.e., the root).
+func RootDirectory() (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		parentDir := filepath.Dir(currentDir)
+		if currentDir == parentDir {
+			return currentDir, nil
+		}
+		currentDir = parentDir
+	}
+}
