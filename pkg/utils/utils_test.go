@@ -786,3 +786,20 @@ func TestTrimUpToRune(t *testing.T) {
 		})
 	}
 }
+
+func TestRootDirectory(t *testing.T) {
+	cases := []struct {
+		name, want string
+	}{
+		{"root", "/"},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := RootDirectory()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("replace() = \"%+v\", want \"%+v\"", got, tt.want)
+			}
+		})
+	}
+}
