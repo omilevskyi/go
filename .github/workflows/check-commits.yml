@@ -5,9 +5,9 @@ on: pull_request
 
 jobs:
   check-commits:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - uses: 1Password/check-signed-commits-action@v1
+      - uses: 1Password/check-signed-commits-action@ed2885f3ed2577a4f5d3c3fe895432a557d23d52 # v1.2.0
