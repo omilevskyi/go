@@ -417,3 +417,41 @@ func RootDirectory() (string, error) {
 		currentDir = parentDir
 	}
 }
+
+// ConfigDirectories returns an ordered list of configuration directories,
+// following this priority:
+//
+// 1. overrideDirs (explicitly passed by the caller)
+// 2. $XDG_CONFIG_HOME (if set)
+// 3. entries from $XDG_CONFIG_DIRS (colon-separated)
+// 4. /usr/local/etc
+// 5. /etc
+//
+// This function fully respects XDG Base Directory Specification while keeping
+// caller-provided paths as the highest-priority lookup layer.
+func ConfigDirectories(overrideDirs ...string) []string {
+	var xdgHome, xdgDirs []string
+	sysDirs := []string{"/usr/local/etc", "/etc"} // "/opt/etc"
+
+	if home := os.Getenv("XDG_CONFIG_HOME"); home != "" {
+		xdgHome = []string{home}
+	}
+
+	for dir := range strings.SplitSeq(os.Getenv("XDG_CONFIG_DIRS"), ":") {
+		if dir != "" {
+			xdgDirs = append(xdgDirs, dir)
+		}
+	}
+
+	// Calculate exact total capacity:
+	// overrides + XDG_HOME (0/1) + XDG_DIRS (N) + system dirs (2)
+	total := len(overrideDirs) + len(xdgHome) + len(xdgDirs) + len(sysDirs)
+
+	result := make([]string, 0, total)
+	result = append(result, overrideDirs...)
+	result = append(result, xdgHome...)
+	result = append(result, xdgDirs...)
+	result = append(result, sysDirs...)
+
+	return result
+}
