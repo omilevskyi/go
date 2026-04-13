@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 const (
 	funcBrackets = "()"
 	nl           = "\n"
+	gitFsEntry   = ".git"
 )
 
 // Quote character for TrimQQ() and EnQQ()
@@ -454,4 +456,36 @@ func ConfigDirectories(overrideDirs ...string) []string {
 	result = append(result, sysDirs...)
 
 	return result
+}
+
+// GitRepoRoot returns the root directory of the Git repository containing
+// the given path by walking up the filesystem tree. The repository root is
+// identified by the presence of a ".git" directory or file (worktree).
+// An error is returned if no Git repository is found.
+func GitRepoRoot(path string) (string, error) {
+	dir, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	if fi, err := os.Stat(dir); err == nil && !fi.IsDir() {
+		dir = filepath.Dir(dir)
+	}
+
+	for {
+		if fi, err := os.Stat(filepath.Join(dir, gitFsEntry)); err == nil { // .git
+			if fi.IsDir() { // Case 1: normal repository (.git is a directory)
+				return dir, nil
+			}
+			if fi.Mode().IsRegular() { // Case 2: worktree (.git is a file)
+				return dir, nil
+			}
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errors.New("git repository root not found")
+		}
+		dir = parent
+	}
 }
