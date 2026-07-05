@@ -1,6 +1,10 @@
 *.log
 *.bak*
 *.orig*
+*.png
 .*/
 coverage.*
 Makefile
+Makefile.local
+vendor/
+generic2notes/generic2notes
