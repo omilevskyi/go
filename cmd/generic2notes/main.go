@@ -18,15 +18,12 @@ const (
 func main() {
 	genericLines, lnMap, err := readGeneric(pathGENERIC)
 	ut.IsErr(err, 201, "readGeneric()")
-	// fmt.Fprintln(os.Stderr, len(genericLines), len(lnMap))
 
 	notesLines, err := processNotes(pathNOTES, genericLines, lnMap)
 	ut.IsErr(err, 202, "processNotes()")
 
 	notes64Lines, err := processNotes(pathNOTES64, genericLines, lnMap)
 	ut.IsErr(err, 203, "processNotes()")
-
-	_, _ = notesLines, notes64Lines
 
 	err = writeLines(filepath.Base(pathGENERIC), genericLines)
 	ut.IsErr(err, 204, "writeLines()")
@@ -38,6 +35,8 @@ func main() {
 	ut.IsErr(err, 206, "writeLines()")
 }
 
+// writeLines writes all lines except those marked as deleted and appends
+// an LF terminator after each written line
 func writeLines(filepath string, lines [][]byte) error {
 	f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
@@ -50,12 +49,9 @@ func writeLines(filepath string, lines [][]byte) error {
 
 	for i := 0; i < len(lines); i++ {
 		// switch {
-		// case generics[i] == nil:
-		// 	fmt.Println("<nil>")
-		// case len(generics[i]) == 0:
-		// 	fmt.Println("<empty>")
-		// default:
-		// 	fmt.Println(string(lines[i]))
+		// case generics[i] == nil: fmt.Println("<nil>")
+		// case len(generics[i]) == 0: fmt.Println("<empty>")
+		// default:	fmt.Println(string(lines[i]))
 		// }
 		if lines[i] == nil || len(lines[i]) > 0 {
 			if _, err := w.Write(lines[i]); err != nil {
