@@ -1,0 +1,170 @@
+#
+# GENERIC -- Generic kernel configuration file for FreeBSD/amd64
+#
+# For more information on this file, please read the config(5) manual page,
+# and/or the handbook section on Kernel Configuration Files:
+#
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
+#
+# The handbook is also available locally in /usr/share/doc/handbook
+# if you've installed the doc distribution, otherwise always see the
+# FreeBSD World Wide Web server (https://www.FreeBSD.org/) for the
+# latest information.
+#
+# An exhaustive list of options and more detailed explanations of the
+# device lines is also present in the ../../conf/NOTES and NOTES files.
+# If you are in doubt as to the purpose or necessity of a line, check first
+# in NOTES.
+#
+
+cpu		HAMMER
+ident		GENERIC
+
+makeoptions	WITH_CTF=1		# Run ctfconvert(1) for DTrace support
+
+options 	EXTERR_STRINGS
+options 	IPSEC_OFFLOAD		# Inline ipsec offload infra
+options 	FIB_ALGO		# Modular fib lookups
+options 	PRINTF_BUFR_SIZE=128	# Prevent printf output being interspersed.
+options 	KDTRACE_FRAME		# Ensure frames are compiled in
+options 	KDTRACE_HOOKS		# Kernel DTrace hooks
+options 	DDB_CTF			# Kernel ELF linker loads CTF data
+options 	RACCT_DEFAULT_TO_DISABLED # Set kern.racct.enable=0 by default
+
+# Debugging support.  Always need this:
+
+# Compression support
+
+# Kernel dump features.
+
+# Make an SMP-capable kernel by default
+
+# CPU frequency control
+device		cpufreq
+
+# Bus support.
+device		acpi
+device		smbios
+options 	IOMMU
+
+
+# Enable support for the kernel PLL to use an external PPS signal,
+# under supervision of [x]ntpd(8)
+# More info in ntpd documentation: http://www.eecis.udel.edu/~ntp
+
+
+# Floppy drives
+device		fdc
+
+# ATA controllers
+
+# SCSI Controllers
+device		hptiop			# Highpoint RocketRaid 3xxx series
+device		isci			# Intel C600 SAS controller
+device		ocs_fc			# Emulex FC adapters
+device		pvscsi			# VMware PVSCSI
+
+# ATA/SCSI peripherals
+
+# RAID controllers interfaced to the SCSI subsystem
+device		arcmsr			# Areca SATA II RAID
+device		ips			# IBM (Adaptec) ServeRAID
+device		tws			# LSI 3ware 9750 SATA+SAS 6Gb/s RAID controller
+
+# RAID controllers
+device		aac			# Adaptec FSA RAID
+device		aacp			# SCSI passthrough for aac (requires CAM)
+#XXX pointer/int warnings
+
+# NVM Express (NVMe) support
+
+# Universal Flash Storage Host Controller Interface support
+device 		ufshci			# UFS host controller
+
+# Intel Volume Management Device (VMD) support
+device		vmd
+
+# atkbdc0 controls both the keyboard and the PS/2 mouse
+device		atkbdc			# AT keyboard controller
+device		atkbd			# AT keyboard
+device		psm			# PS/2 mouse
+
+
+# syscons is the legacy console driver, resembling an SCO console
+device		vga			# VGA video card driver
+device		splash			# Splash screen and screen saver support
+device		sc
+options 	SC_PIXEL_MODE		# add support for the raster text mode
+
+# vt is the default video console driver
+device		vt_vga
+device		vt_vbefb
+
+device		agp			# support several AGP chipsets
+
+# CardBus bridge support
+
+# Serial (COM) ports
+
+# Parallel port
+#device		vpo			# Requires scbus and da
+
+
+# PCI/PCI-X/PCIe Ethernet NICs that use iflib infrastructure
+device		igc			# Intel I225 2.5G Ethernet
+device		vmx			# VMware VMXNET3 Ethernet
+
+# PCI Ethernet NICs.
+device		bxe			# Broadcom NetXtreme II BCM5771X/BCM578XX 10GbE
+
+# Nvidia/Mellanox Connect-X 4 and later, Ethernet only
+#  o requires COMPAT_LINUXKPI and xz(4)
+#  o mlx5ib requires ibcore infra and is not included by default
+
+# PCI Ethernet NICs that use the common MII bus controller code.
+# NOTE: Be sure to keep the 'device miibus' line in order to use these NICs!
+device		nfe			# nVidia nForce MCP on-board Ethernet
+device		vge			# VIA VT612x gigabit Ethernet
+
+# Wireless NIC cards
+options 	AH_AR5416_INTERRUPT_MITIGATION # AR5416 interrupt mitigation
+device		ipw			# Intel 2100 wireless NICs.
+device		iwi			# Intel 2200BG/2225BG/2915ABG wireless NICs.
+device		iwn			# Intel 4965/1000/5000/6000 wireless NICs.
+device		wpi			# Intel 3945ABG wireless NICs.
+
+# Pseudo devices.
+device		aesni			# AES-NI OpenCrypto module
+device		padlock_rng		# VIA Padlock RNG
+device		rdrand_rng		# Intel Bull Mountain RNG
+
+# The `bpf' device enables the Berkeley Packet Filter.
+# Be aware of the administrative consequences of enabling this!
+# Note that 'bpf' is required for DHCP.
+
+# USB support
+
+# Sound support
+
+# MMC/SD
+
+# VirtIO support
+
+# Linux KVM paravirtualization support
+device		kvm_clock		# KVM paravirtual clock driver
+
+# HyperV drivers and enhancement support
+device		hyperv			# HyperV drivers
+
+# Xen HVM Guest Optimizations
+# NOTE: XENHVM depends on xenpci and xentimer.
+# They must be added or removed together.
+
+# Netmap provides direct access to TX/RX rings on supported NICs
+
+# evdev interface
+
+# HID support
+options 	IICHID_SAMPLING		# Workaround missing GPIO INTR support
+
+# EFI devices
