@@ -208,9 +208,9 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 # SCHED_STATS is a debugging option which keeps some stats in the sysctl
 # tree at 'kern.sched.stats' and is useful for debugging scheduling decisions.
 #
-options 	SCHED_4BSD
+options 	SCHED_4BSD		# Original 4.xBSD scheduler
 options 	SCHED_STATS
-options 	SCHED_ULE
+options 	SCHED_ULE		# ULE scheduler
 
 #####################################################################
 # SMP OPTIONS:
@@ -232,7 +232,7 @@ options 	MAXCPU=32
 
 # NUMA enables use of Non-Uniform Memory Access policies in various kernel
 # subsystems.
-options 	NUMA
+options 	NUMA			# Non-Uniform Memory Architecture support
 
 # MAXMEMDOM defines the maximum number of memory domains that can boot in the
 # system.  A default value should already be defined by every architecture.
@@ -303,7 +303,7 @@ options 	SX_NOINLINE
 #	  a lock hierarchy violation occurs or if locks are held when going to
 #	  sleep.
 # WITNESS_SKIPSPIN disables the witness checks on spin mutexes.
-options 	PREEMPTION
+options 	PREEMPTION		# Enable kernel thread preemption
 options 	FULL_PREEMPTION
 options 	WITNESS
 options 	WITNESS_KDB
@@ -864,16 +864,16 @@ options 	VNET_DEBUG	# debug for VIMAGE
 #
 # Network interfaces:
 #  The `loop' device is MANDATORY when networking is enabled.
-device		loop
+device		loop			# Network loopback
 
 #  The `ether' device provides generic code to handle
 #  Ethernets; it is MANDATORY when an Ethernet device driver is
 #  configured.
-device		ether
+device		ether			# Ethernet support
 
 #  The `vlan' device implements the VLAN tagging of Ethernet frames
 #  according to IEEE 802.1Q.
-device		vlan
+device		vlan			# 802.1Q VLAN support
 
 # The `vxlan' device implements the VXLAN encapsulation of Ethernet
 # frames in UDP packets according to RFC7348.
@@ -882,19 +882,19 @@ device		vxlan
 #  The `wlan' device provides generic code to support 802.11
 #  drivers, including host AP mode; it is MANDATORY for the wi,
 #  and ath drivers and will eventually be required by all 802.11 drivers.
-device		wlan
-options 	IEEE80211_DEBUG		#enable debugging msgs
+device		wlan			# 802.11 support
+options 	IEEE80211_DEBUG		# enable debug msgs
 options 	IEEE80211_DEBUG_REFCNT
-options 	IEEE80211_SUPPORT_MESH	#enable 802.11s D3.0 support
+options 	IEEE80211_SUPPORT_MESH	# enable 802.11s draft support
 options 	IEEE80211_SUPPORT_TDMA	#enable TDMA support
 
 #  The `wlan_wep', `wlan_tkip', `wlan_ccmp', and `wlan_gcmp' devices provide
 #  support for WEP, TKIP, AES-CCMP and AES-GCMP crypto protocols optionally used
 #  with 802.11 devices that depend on the `wlan' module.
-device		wlan_wep
-device		wlan_tkip
-device		wlan_ccmp
-device		wlan_gcmp
+device		wlan_wep		# 802.11 WEP support
+device		wlan_tkip		# 802.11 TKIP support
+device		wlan_ccmp		# 802.11 CCMP support
+device		wlan_gcmp		# 802.11 GCMP support
 
 #  The `wlan_xauth' device provides support for external (i.e. user-mode)
 #  authenticators for use with 802.11 drivers that use the `wlan'
@@ -906,7 +906,7 @@ device		wlan_xauth
 #  `wlan' module.
 #  The 'wlan_amrr' device provides AMRR transmit rate control algorithm
 device		wlan_acl
-device		wlan_amrr
+device		wlan_amrr		# AMRR transmit rate control algorithm
 
 #  The `bpf' device enables the Berkeley Packet Filter.  Be
 #  aware of the legal and administrative consequences of enabling this

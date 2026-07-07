@@ -1,0 +1,19 @@
+#
+# DEFAULTS -- Default kernel configuration file for FreeBSD/amd64
+#
+
+machine		amd64
+
+
+# Bus support.
+device		isa
+
+# Pseudo devices.
+device		io		# I/O device
+
+# UART chips on this platform
+device		uart_ns8250
+
+# Default partitioning schemes
+
+# Default congestion control algorithm

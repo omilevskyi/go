@@ -24,23 +24,26 @@ func main() {
 	genericLines, gnrcMap, err := readConfig(pathGENERIC)
 	ut.IsErr(err, 201, "readConfig()")
 
-	_, dfltMap, err := readConfig(pathDEFAULTS)
+	defaultsLines, dfltMap, err := readConfig(pathDEFAULTS)
 	ut.IsErr(err, 202, "readConfig()")
 
-	notesLines, err := processNotes(pathNOTES, genericLines, gnrcMap, dfltMap)
+	notesLines, err := processNotes(pathNOTES, genericLines, gnrcMap, defaultsLines, dfltMap)
 	ut.IsErr(err, 203, "processNotes()")
 
-	notes64Lines, err := processNotes(pathNOTES64, genericLines, gnrcMap, dfltMap)
+	notes64Lines, err := processNotes(pathNOTES64, genericLines, gnrcMap, defaultsLines, dfltMap)
 	ut.IsErr(err, 204, "processNotes()")
 
 	err = writeLines(filepath.Base(pathGENERIC), genericLines)
 	ut.IsErr(err, 205, "writeLines()")
 
-	err = writeLines(filepath.Base(pathNOTES), notesLines)
+	err = writeLines(filepath.Base(pathDEFAULTS), defaultsLines)
 	ut.IsErr(err, 206, "writeLines()")
 
-	err = writeLines(filepath.Base(pathNOTES64)+"-AMD64", notes64Lines)
+	err = writeLines(filepath.Base(pathNOTES), notesLines)
 	ut.IsErr(err, 207, "writeLines()")
+
+	err = writeLines(filepath.Base(pathNOTES64)+"-AMD64", notes64Lines)
+	ut.IsErr(err, 208, "writeLines()")
 }
 
 // writeLines writes all lines except those marked as deleted and appends
@@ -106,7 +109,7 @@ func readConfig(filepath string) ([][]byte, map[string]int, error) {
 // processNotes reads a notes file, substitutes matching keyword/value pairs
 // with their corresponding lines from the generic file, and marks the reused
 // generic lines so they can be identified as consumed later
-func processNotes(filepath string, generics [][]byte, gnrc, dflt map[string]int) ([][]byte, error) {
+func processNotes(filepath string, generics [][]byte, gnrc map[string]int, defaults [][]byte, dflt map[string]int) ([][]byte, error) {
 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, ut.Fringerr(err)
@@ -118,18 +121,19 @@ func processNotes(filepath string, generics [][]byte, gnrc, dflt map[string]int)
 		return nil, ut.Fringerr(err)
 	}
 
-	lc := lineCount(data)
-	lines := make([][]byte, 0, lc)
-	for i := 0; i < lc; i++ {
+	l := lineCount(data)
+	lines := make([][]byte, 0, l)
+	for i := 0; i < l; i++ {
 		line, rest := nextLine(data)
 
 		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
-			if ln, ok := gnrc[concat(kwrd, []byte{sep}, val)]; ok {
-				line = generics[ln]
-				generics[ln] = []byte("") // mark it in such an awkward way that the line has been deleted
+			if n, ok := gnrc[concat(kwrd, []byte{sep}, val)]; ok {
+				line = generics[n]
+				generics[n] = []byte("") // mark it in such an awkward way that the line has been deleted
 			}
-			if _, ok := dflt[concat(kwrd, []byte{sep}, val)]; ok {
+			if n, ok := dflt[concat(kwrd, []byte{sep}, val)]; ok {
 				line = append([]byte(prefixDEFAULTS), stripPrefix(line, cmntEol)...)
+				defaults[n] = []byte("")
 			}
 		}
 
