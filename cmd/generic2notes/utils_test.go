@@ -786,3 +786,274 @@ func TestKeywordValueReturnsSlicesOfOriginalBuffer(t *testing.T) {
 		t.Fatal("value is not backed by original buffer")
 	}
 }
+
+func TestStripPrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		prefix byte
+		want   []byte
+	}{
+		{
+			name:   "nil",
+			input:  nil,
+			prefix: '#',
+			want:   nil,
+		},
+		{
+			name:   "empty",
+			input:  []byte{},
+			prefix: '#',
+			want:   []byte{},
+		},
+		{
+			name:   "no prefix",
+			input:  []byte("device"),
+			prefix: '#',
+			want:   []byte("device"),
+		},
+		{
+			name:   "single prefix",
+			input:  []byte("#device"),
+			prefix: '#',
+			want:   []byte("device"),
+		},
+		{
+			name:   "multiple prefixes",
+			input:  []byte("#####device"),
+			prefix: '#',
+			want:   []byte("device"),
+		},
+		{
+			name:   "only prefix",
+			input:  []byte("#"),
+			prefix: '#',
+			want:   []byte{},
+		},
+		{
+			name:   "only multiple prefixes",
+			input:  []byte("#####"),
+			prefix: '#',
+			want:   []byte{},
+		},
+		{
+			name:   "different leading character",
+			input:  []byte("*device"),
+			prefix: '#',
+			want:   []byte("*device"),
+		},
+		{
+			name:   "mixed prefixes",
+			input:  []byte("##*device"),
+			prefix: '#',
+			want:   []byte("*device"),
+		},
+		{
+			name:   "zero byte prefix",
+			input:  []byte{0, 0, 'a'},
+			prefix: 0,
+			want:   []byte{'a'},
+		},
+		{
+			name:   "all zero byte prefix",
+			input:  []byte{0, 0, 0},
+			prefix: 0,
+			want:   []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := stripPrefix(tt.input, tt.prefix)
+
+			if !bytes.Equal(got, tt.want) {
+				t.Fatalf(
+					"got=%q want=%q",
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}
+
+func TestStripPrefixReturnsOriginalBackingArray(t *testing.T) {
+	data := []byte("###device")
+
+	got := stripPrefix(data, '#')
+
+	want := data[3:]
+
+	if !bytes.Equal(got, want) {
+		t.Fatalf("got=%q want=%q", got, want)
+	}
+
+	if len(got) > 0 && &got[0] != &want[0] {
+		t.Fatal("returned slice is not backed by original array")
+	}
+}
+
+func TestStripPrefixIdempotent(t *testing.T) {
+	data := []byte("###device")
+
+	once := stripPrefix(data, '#')
+	twice := stripPrefix(once, '#')
+
+	if !bytes.Equal(once, twice) {
+		t.Fatalf("once=%q twice=%q", once, twice)
+	}
+}
+
+func TestConcat(t *testing.T) {
+	tests := []struct {
+		name  string
+		parts [][]byte
+		want  string
+	}{
+		{
+			name:  "no parts",
+			parts: nil,
+			want:  "",
+		},
+		{
+			name:  "empty slice",
+			parts: [][]byte{},
+			want:  "",
+		},
+		{
+			name:  "single nil",
+			parts: [][]byte{nil},
+			want:  "",
+		},
+		{
+			name:  "single empty",
+			parts: [][]byte{{}},
+			want:  "",
+		},
+		{
+			name:  "single part",
+			parts: [][]byte{[]byte("foo")},
+			want:  "foo",
+		},
+		{
+			name: "two parts",
+			parts: [][]byte{
+				[]byte("foo"),
+				[]byte("bar"),
+			},
+			want: "foobar",
+		},
+		{
+			name: "multiple parts",
+			parts: [][]byte{
+				[]byte("foo"),
+				[]byte("bar"),
+				[]byte("baz"),
+			},
+			want: "foobarbaz",
+		},
+		{
+			name: "mixed nil and empty",
+			parts: [][]byte{
+				nil,
+				[]byte("foo"),
+				{},
+				nil,
+				[]byte("bar"),
+			},
+			want: "foobar",
+		},
+		{
+			name: "contains separator",
+			parts: [][]byte{
+				[]byte("options"),
+				{0},
+				[]byte("XENHVM"),
+			},
+			want: "options\x00XENHVM",
+		},
+		{
+			name: "binary data",
+			parts: [][]byte{
+				{0x00, 0x01},
+				{0xff},
+				{0x7f},
+			},
+			want: string([]byte{
+				0x00, 0x01,
+				0xff,
+				0x7f,
+			}),
+		},
+		{
+			name: "utf8",
+			parts: [][]byte{
+				[]byte("Привет"),
+				[]byte(" "),
+				[]byte("мир"),
+			},
+			want: "Привет мир",
+		},
+		{
+			name: "preserve order",
+			parts: [][]byte{
+				[]byte("3"),
+				[]byte("2"),
+				[]byte("1"),
+			},
+			want: "321",
+		},
+		{
+			name: "all empty",
+			parts: [][]byte{
+				nil,
+				{},
+				nil,
+				{},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := concat(tt.parts...)
+
+			if got != tt.want {
+				t.Fatalf(
+					"got %q, want %q",
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}
+
+func TestConcatDoesNotModifyInput(t *testing.T) {
+	a := []byte("foo")
+	b := []byte("bar")
+
+	_ = concat(a, b)
+
+	if !bytes.Equal(a, []byte("foo")) {
+		t.Fatalf("a modified: %q", a)
+	}
+
+	if !bytes.Equal(b, []byte("bar")) {
+		t.Fatalf("b modified: %q", b)
+	}
+}
+
+func TestConcatManyParts(t *testing.T) {
+	parts := make([][]byte, 1000)
+	for i := range parts {
+		parts[i] = []byte("x")
+	}
+
+	got := concat(parts...)
+
+	if len(got) != len(parts) {
+		t.Fatalf("got len=%d want=%d", len(got), len(parts))
+	}
+}

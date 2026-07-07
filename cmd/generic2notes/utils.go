@@ -17,16 +17,16 @@ const (
 
 // lineCount returns the number of lines in data without allocating,
 // allowing accurate preallocation of a slice for subsequent line parsing.
-func lineCount(data []byte) int {
+func lineCount(b []byte) int {
 	n := 0
-	if l := len(data); l > 0 {
+	if l := len(b); l > 0 {
 		n = 1
 		for i := 0; i < l; i++ {
-			if data[i] == lf {
+			if b[i] == lf {
 				n++
 			}
 		}
-		if data[l-1] == lf {
+		if b[l-1] == lf {
 			return n - 1
 		}
 	}
@@ -35,27 +35,27 @@ func lineCount(data []byte) int {
 
 // nextLine returns the first line and remaining data, trimming LF and preceding CR characters.
 // Line terminators are excluded from the returned line.
-func nextLine(data []byte) (line []byte, rest []byte) {
-	if l := len(data); l > 0 {
+func nextLine(b []byte) (line []byte, rest []byte) {
+	if l := len(b); l > 0 {
 		for i := 0; i < l; i++ {
-			if data[i] == lf {
+			if b[i] == lf {
 				end := i
-				for i > 0 && data[i-1] == cr {
+				for i > 0 && isSpace(b[i-1]) {
 					i--
 				}
 				if i > 0 {
 					if end+1 < l {
-						return data[:i], data[end+1:]
+						return b[:i], b[end+1:]
 					}
-					return data[:i], nil
+					return b[:i], nil
 				}
 				if end+1 < l {
-					return nil, data[end+1:]
+					return nil, b[end+1:]
 				}
 				return nil, nil
 			}
 		}
-		return data, nil
+		return b, nil
 	}
 	return nil, nil
 }
@@ -69,23 +69,19 @@ func isSpace(c byte) bool {
 	return false
 }
 
-// func uniqueBytes() []byte {
-// 	return strconv.AppendInt(nil, time.Now().UnixNano(), 36) // 0-9 + a-z
-// }
-
 // stripPrefixIfSuffixes strips leading prefix bytes and returns the matching
 // suffix if the remaining data exactly matches one of the allowed suffixes.
-func stripPrefixIfSuffixes(data []byte, prefix byte, suffixes [][]byte) []byte {
-	ldata := len(data)
+func stripPrefixIfSuffixes(b []byte, prefix byte, suffixes [][]byte) []byte {
+	bufLn := len(b)
 	for _, suffix := range suffixes {
-		if bytes.HasSuffix(data, suffix) {
-			lsfx := len(suffix)
-			pos := ldata - lsfx
-			for pos > 0 && data[pos-1] == prefix {
+		if bytes.HasSuffix(b, suffix) {
+			sfxLn := len(suffix)
+			pos := bufLn - sfxLn
+			for pos > 0 && b[pos-1] == prefix {
 				pos--
 			}
 			if pos == 0 {
-				return data[ldata-lsfx:]
+				return b[bufLn-sfxLn:]
 			}
 			return nil
 		}
@@ -93,25 +89,34 @@ func stripPrefixIfSuffixes(data []byte, prefix byte, suffixes [][]byte) []byte {
 	return nil
 }
 
+// stripPrefix removes all leading prefix bytes and returns a subslice of the original data
+func stripPrefix(b []byte, prefix byte) []byte {
+	i, l := 0, len(b)
+	for i < l && b[i] == prefix {
+		i++
+	}
+	return b[i:]
+}
+
 // keywordValue extracts a supported keyword and its optional value,
 // allowing the keyword to be prefixed with comment characters ('#')
-func keywordValue(data []byte) (keyword, value []byte) {
-	i, l := 0, len(data)
+func keywordValue(b []byte) (keyword, value []byte) {
+	i, l := 0, len(b)
 
 	// Skip leading space
-	for i < l && isSpace(data[i]) {
+	for i < l && isSpace(b[i]) {
 		i++
 	}
 
 	// Keyword that comes first
 	start := i
-	for i < l && !isSpace(data[i]) {
+	for i < l && !isSpace(b[i]) {
 		i++
 	}
 	if start == i {
 		return nil, nil
 	}
-	keyword = stripPrefixIfSuffixes(data[start:i], cmntEol, [][]byte{
+	keyword = stripPrefixIfSuffixes(b[start:i], cmntEol, [][]byte{
 		[]byte("device"), []byte("makeoptions"), []byte("options"),
 	})
 	if keyword == nil {
@@ -119,18 +124,33 @@ func keywordValue(data []byte) (keyword, value []byte) {
 	}
 
 	// Skip space
-	for i < l && isSpace(data[i]) {
+	for i < l && isSpace(b[i]) {
 		i++
 	}
 
 	// Value that comes second
 	start = i
-	for i < l && !isSpace(data[i]) {
+	for i < l && !isSpace(b[i]) {
 		i++
 	}
 	if start != i {
-		value = data[start:i]
+		value = b[start:i]
 	}
 
 	return keyword, value
+}
+
+// concat efficiently joins multiple byte slices into a single string
+func concat(parts ...[]byte) string {
+	l, n := len(parts), 0
+	for i := 0; i < l; i++ {
+		n += len(parts[i])
+	}
+
+	b := make([]byte, 0, n)
+	for i := 0; i < l; i++ {
+		b = append(b, parts[i]...)
+	}
+
+	return string(b)
 }

@@ -166,12 +166,12 @@ options 	GEOM_MIRROR		# Disk mirroring.
 options 	GEOM_MULTIPATH		# Disk multipath
 options 	GEOM_NOP		# Test class.
 options 	GEOM_PART_APM		# Apple partitioning
-options 	GEOM_PART_BSD		# BSD disklabel
+#DEFAULTS: options 	GEOM_PART_BSD		# BSD disklabel
 options 	GEOM_PART_BSD64		# BSD disklabel64
-options 	GEOM_PART_EBR		# Extended Boot Records
-options 	GEOM_PART_GPT		# GPT partitioning
+#DEFAULTS: options 	GEOM_PART_EBR		# Extended Boot Records
+#DEFAULTS: options 	GEOM_PART_GPT		# GPT partitioning
 options 	GEOM_PART_LDM		# Logical Disk Manager
-options 	GEOM_PART_MBR		# MBR partitioning
+#DEFAULTS: options 	GEOM_PART_MBR		# MBR partitioning
 options 	GEOM_RAID		# Soft RAID functionality.
 options 	GEOM_RAID3		# RAID3 functionality.
 options 	GEOM_SHSEC		# Shared secret.
@@ -224,7 +224,7 @@ options 	SMP			# Symmetric MultiProcessor Kernel
 # kernel startup process (before devices are probed) rather than at the
 # end.  This is a temporary option for use during the transition from
 # late to early AP startup.
-options 	EARLY_AP_STARTUP
+#DEFAULTS: options 	EARLY_AP_STARTUP
 
 # MAXCPU defines the maximum number of CPUs that can boot in the system.
 # A default value should be already present, for every architecture.
@@ -663,7 +663,7 @@ options 	INET6			# IPv6 communications protocols
 #
 options 	CC_CDG
 options 	CC_CHD
-options 	CC_CUBIC
+#DEFAULTS: options 	CC_CUBIC
 options 	CC_DCTCP
 options 	CC_HD
 options 	CC_HTCP
@@ -698,7 +698,7 @@ options 	TCP_RACK
 options 	KERN_TLS		# TLS transmit & receive offload
 
 # Netlink kernel/user<>kernel/user messaging interface
-options 	NETLINK
+#DEFAULTS: options 	NETLINK
 
 #
 # SMB/CIFS requester
@@ -1213,7 +1213,7 @@ options 	NFS_DEBUG		# Enable NFS Debugging
 options 	EXT2FS
 
 # The system memory devices; /dev/mem, /dev/kmem
-device		mem
+#DEFAULTS: device		mem
 
 # The kernel symbol table device; /dev/ksyms
 device		ksyms
