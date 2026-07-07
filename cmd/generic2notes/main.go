@@ -10,29 +10,37 @@ import (
 )
 
 const (
-	pathGENERIC = "/usr/src/sys/amd64/conf/GENERIC"
-	pathNOTES   = "/usr/src/sys/conf/NOTES"
-	pathNOTES64 = "/usr/src/sys/amd64/conf/NOTES"
+	pathGENERIC  = "/usr/src/sys/amd64/conf/GENERIC"
+	pathNOTES    = "/usr/src/sys/conf/NOTES"
+	pathNOTES64  = "/usr/src/sys/amd64/conf/NOTES"
+	pathDEFAULTS = "/usr/src/sys/amd64/conf/DEFAULTS"
+
+	prefixDEFAULTS string = string(cmntEol) + "DEFAULTS: "
+
+	sep byte = 0
 )
 
 func main() {
-	genericLines, lnMap, err := readGeneric(pathGENERIC)
-	ut.IsErr(err, 201, "readGeneric()")
+	genericLines, gnrcMap, err := readConfig(pathGENERIC)
+	ut.IsErr(err, 201, "readConfig()")
 
-	notesLines, err := processNotes(pathNOTES, genericLines, lnMap)
-	ut.IsErr(err, 202, "processNotes()")
+	_, dfltMap, err := readConfig(pathDEFAULTS)
+	ut.IsErr(err, 202, "readConfig()")
 
-	notes64Lines, err := processNotes(pathNOTES64, genericLines, lnMap)
+	notesLines, err := processNotes(pathNOTES, genericLines, gnrcMap, dfltMap)
 	ut.IsErr(err, 203, "processNotes()")
 
-	err = writeLines(filepath.Base(pathGENERIC), genericLines)
-	ut.IsErr(err, 204, "writeLines()")
+	notes64Lines, err := processNotes(pathNOTES64, genericLines, gnrcMap, dfltMap)
+	ut.IsErr(err, 204, "processNotes()")
 
-	err = writeLines(filepath.Base(pathNOTES), notesLines)
+	err = writeLines(filepath.Base(pathGENERIC), genericLines)
 	ut.IsErr(err, 205, "writeLines()")
 
-	err = writeLines(filepath.Base(pathNOTES64)+"-AMD64", notes64Lines)
+	err = writeLines(filepath.Base(pathNOTES), notesLines)
 	ut.IsErr(err, 206, "writeLines()")
+
+	err = writeLines(filepath.Base(pathNOTES64)+"-AMD64", notes64Lines)
+	ut.IsErr(err, 207, "writeLines()")
 }
 
 // writeLines writes all lines except those marked as deleted and appends
@@ -66,9 +74,9 @@ func writeLines(filepath string, lines [][]byte) error {
 	return nil
 }
 
-// readGeneric reads GENERIC file, preserves its original lines,
+// readConfig reads GENERIC file, preserves its original lines,
 // and builds a lookup map from keyword/value pairs to line indexes
-func readGeneric(filepath string) ([][]byte, map[string]int, error) {
+func readConfig(filepath string) ([][]byte, map[string]int, error) {
 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, nil, ut.Fringerr(err)
@@ -88,8 +96,8 @@ func readGeneric(filepath string) ([][]byte, map[string]int, error) {
 		lines = append(lines, line)
 		data = rest
 
-		if opt, val := keywordValue(line); len(opt) > 0 && len(val) > 0 {
-			m[string(opt)+string(byte(0))+string(val)] = i
+		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
+			m[concat(kwrd, []byte{sep}, val)] = i
 		}
 	}
 	return lines, m, nil
@@ -98,7 +106,7 @@ func readGeneric(filepath string) ([][]byte, map[string]int, error) {
 // processNotes reads a notes file, substitutes matching keyword/value pairs
 // with their corresponding lines from the generic file, and marks the reused
 // generic lines so they can be identified as consumed later
-func processNotes(filepath string, generics [][]byte, m map[string]int) ([][]byte, error) {
+func processNotes(filepath string, generics [][]byte, gnrc, dflt map[string]int) ([][]byte, error) {
 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, ut.Fringerr(err)
@@ -116,9 +124,12 @@ func processNotes(filepath string, generics [][]byte, m map[string]int) ([][]byt
 		line, rest := nextLine(data)
 
 		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
-			if ln, ok := m[string(kwrd)+string(byte(0))+string(val)]; ok {
+			if ln, ok := gnrc[concat(kwrd, []byte{sep}, val)]; ok {
 				line = generics[ln]
 				generics[ln] = []byte("") // mark it in such an awkward way that the line has been deleted
+			}
+			if _, ok := dflt[concat(kwrd, []byte{sep}, val)]; ok {
+				line = append([]byte(prefixDEFAULTS), stripPrefix(line, cmntEol)...)
 			}
 		}
 
