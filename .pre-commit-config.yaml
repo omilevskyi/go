@@ -38,7 +38,7 @@ repos:
       - id: check-github-workflows
 
   - repo: https://github.com/homebysix/pre-commit-macadmin
-    rev: v1.25.0
+    rev: v1.25.1
     hooks:
       - id: check-git-config-email
         args: ["--domains", "aerlingus.com"]
