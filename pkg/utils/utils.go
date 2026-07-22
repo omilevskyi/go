@@ -489,3 +489,12 @@ func GitRepoRoot(path string) (string, error) {
 		dir = parent
 	}
 }
+
+// Must returns v if e is nil; otherwise it panics.
+// Useful for reducing boilerplate when an error is not expected.
+func Must[T any](v T, e error) T {
+	if e != nil {
+		panic(e)
+	}
+	return v
+}
