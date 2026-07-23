@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -30,18 +31,18 @@ var eiTags = map[string]bool{
 	"ei:provisioning-source": false,
 }
 
-func arnsByTags(ctx context.Context, c *elasticloadbalancingv2.Client, arns []string, tags map[string]bool, envName string) []string {
+func arnsByTags(ctx context.Context, c *elasticloadbalancingv2.Client, tags map[string]bool, arns map[string]string) []string {
 	if len(arns) > 0 {
 		out, err := c.DescribeTags(
-			ctx, &elasticloadbalancingv2.DescribeTagsInput{ResourceArns: arns},
+			ctx, &elasticloadbalancingv2.DescribeTagsInput{ResourceArns: ut.Keys(arns)},
 		)
 		if err == nil {
 			var result []string
-			envPath := env2path(envName)
 			for _, td := range out.TagDescriptions {
-				for _, tag := range td.Tags {
-					if strict, ok := tags[*tag.Key]; ok {
-						if strict && *tag.Value == envName || !strict && strings.Contains(*tag.Value, envPath) {
+				if env, ok := arns[*td.ResourceArn]; ok {
+					envPath := env2path(env)
+					for _, tag := range td.Tags {
+						if strict, ok := tags[*tag.Key]; ok && (strict && *tag.Value == env || !strict && strings.Contains(*tag.Value, envPath)) {
 							result = append(result, *td.ResourceArn)
 							break
 						}
@@ -72,23 +73,22 @@ func main() {
 		ut.IsErr(err, 201)
 
 		arns = make([]string, 0, (n-1)*len(lbs)/16) // estimatedLoadBalancerCount
-		chnkArns := make([]string, 0, maxDescribeTagsResources)
+		chunk := make(map[string]string, maxDescribeTagsResources)
 
 		for j := 0; j < len(lbs); j++ {
 			for i := 1; i < n; i++ {
 				if strings.HasPrefix(*lbs[j].LoadBalancerName, os.Args[i]+eiSep) || strings.HasSuffix(*lbs[j].LoadBalancerName, eiSep+os.Args[i]) {
 					arns = append(arns, *lbs[j].LoadBalancerArn)
 				} else {
-					chnkArns = append(chnkArns, *lbs[j].LoadBalancerArn)
-					if len(chnkArns) == cap(chnkArns) {
-						arns = append(arns, arnsByTags(context.Background(), client, chnkArns, eiTags, os.Args[i])...)
-						chnkArns = chnkArns[:0]
+					chunk[*lbs[j].LoadBalancerArn] = os.Args[i]
+					if len(chunk) == maxDescribeTagsResources {
+						arns = append(arns, arnsByTags(ctx, client, eiTags, chunk)...)
+						clear(chunk)
 					}
 				}
-				arns = append(arns, arnsByTags(context.Background(), client, chnkArns, eiTags, os.Args[i])...)
-				chnkArns = chnkArns[:0]
 			}
 		}
+		arns = append(arns, arnsByTags(ctx, client, eiTags, chunk)...)
 	} else {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -98,9 +98,9 @@ func main() {
 		}
 		ut.IsErr(scanner.Err(), 201, "scanner.Err()")
 	}
-	// for i := 0; i < len(arns); i++ {
-	// 	fmt.Println(arns[i])
-	// }
-	spew.Dump(arns)
+	for i := 0; i < len(arns); i++ {
+		fmt.Println(arns[i])
+	}
 	os.Exit(0)
+	spew.Dump(arns)
 }
