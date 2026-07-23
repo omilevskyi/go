@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +19,8 @@ import (
 const (
 	timeoutSec = 60
 
-	maxDescribeTagsResources = 20 // DescribeTags accepts at most 20 resource ARNs per request
+	// maxDescribeTagsResources = 20 // DescribeTags accepts at most 20 resource ARNs per request
+	estimatedLoadBalancerCount = 64
 
 	eiEnvValue = "devo1"
 )
@@ -79,18 +79,24 @@ func main() {
 		lbs, err := describeLoadBalancers(ctx, client)
 		ut.IsErr(err, 201)
 
-		arns = make([]string, 0, len(lbs))
-		chunkArns := make([]string, 0, maxDescribeTagsResources)
+		arns = make([]string, 0, len(lbs)/16) // estimatedLoadBalancerCount
+		// chunkArns := make([]string, 0, maxDescribeTagsResources)
+		// for i := 0; i < len(lbs); i++ {
+		// 	chunkArns = append(chunkArns, *lbs[i].LoadBalancerArn)
+		// 	if len(chunkArns) == cap(chunkArns) {
+		// 		// spew.Dump(chunkArns)
+		// 		// fmt.Println()
+		// 		arns = append(arns, arnsWithTag(ctx, client, chunkArns, eiEnvValue, eiEnvKeys...)...)
+		// 		chunkArns = chunkArns[:0]
+		// 	}
+		// }
+		// arns = append(arns, arnsWithTag(ctx, client, chunkArns, eiEnvValue, eiEnvKeys...)...)
 		for i := 0; i < len(lbs); i++ {
-			chunkArns = append(chunkArns, *lbs[i].LoadBalancerArn)
-			if len(chunkArns) == cap(chunkArns) {
-				// spew.Dump(chunkArns)
-				// fmt.Println()
-				arns = append(arns, arnsWithTag(ctx, client, chunkArns, eiEnvValue, eiEnvKeys...)...)
-				chunkArns = chunkArns[:0]
+			if strings.HasPrefix(*lbs[i].LoadBalancerName, eiEnvValue+"-") {
+				arns = append(arns, *lbs[i].LoadBalancerArn)
 			}
 		}
-		arns = append(arns, arnsWithTag(ctx, client, chunkArns, eiEnvValue, eiEnvKeys...)...)
+
 		// spew.Dump(chunkArns)
 		// fmt.Println()
 	} else {
@@ -102,9 +108,9 @@ func main() {
 		}
 		ut.IsErr(scanner.Err(), 201, "scanner.Err()")
 	}
-	for i := 0; i < len(arns); i++ {
-		fmt.Println(arns[i])
-	}
-	os.Exit(0)
+	// for i := 0; i < len(arns); i++ {
+	// 	fmt.Println(arns[i])
+	// }
 	spew.Dump(arns)
+	os.Exit(0)
 }
