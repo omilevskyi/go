@@ -38,18 +38,18 @@ func arnsWithTag(ctx context.Context, c *elasticloadbalancingv2.Client, arns []s
 		if err == nil {
 			var result []string
 			for _, td := range out.TagDescriptions {
-				spew.Dump(td)
+				// spew.Dump(td)
 			outer:
 				for _, tag := range td.Tags {
 					for _, key := range keys {
 						if key == *tag.Key && envName == *tag.Value || *tag.Key == "ei:provisioning-source" && strings.Contains(*tag.Value, env2path(envName)) {
-							fmt.Println(" ", *tag.Key, *tag.Value)
+							// fmt.Println(" ", *tag.Key, *tag.Value)
 							result = append(result, *td.ResourceArn)
 							break outer
 						}
 					}
 				}
-				fmt.Println()
+				// fmt.Println()
 			}
 			if len(result) > 0 {
 				return result
@@ -76,15 +76,13 @@ func main() {
 
 	if isatty.IsTerminal(os.Stdin.Fd()) {
 		client := elasticloadbalancingv2.NewFromConfig(cfg)
-		out, err := client.DescribeLoadBalancers(
-			ctx, &elasticloadbalancingv2.DescribeLoadBalancersInput{},
-		)
+		lbs, err := describeLoadBalancers(ctx, client)
 		ut.IsErr(err, 201)
 
-		arns = make([]string, 0, len(out.LoadBalancers))
+		arns = make([]string, 0, len(lbs))
 		chunkArns := make([]string, 0, maxDescribeTagsResources)
-		for i := 0; i < len(out.LoadBalancers); i++ {
-			chunkArns = append(chunkArns, *out.LoadBalancers[i].LoadBalancerArn)
+		for i := 0; i < len(lbs); i++ {
+			chunkArns = append(chunkArns, *lbs[i].LoadBalancerArn)
 			if len(chunkArns) == cap(chunkArns) {
 				// spew.Dump(chunkArns)
 				// fmt.Println()
@@ -104,5 +102,9 @@ func main() {
 		}
 		ut.IsErr(scanner.Err(), 201, "scanner.Err()")
 	}
+	for i := 0; i < len(arns); i++ {
+		fmt.Println(arns[i])
+	}
+	os.Exit(0)
 	spew.Dump(arns)
 }
