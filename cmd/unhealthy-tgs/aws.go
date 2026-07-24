@@ -27,3 +27,38 @@ func describeLoadBalancers(ctx context.Context, c *elasticloadbalancingv2.Client
 	}
 	return nil, nil
 }
+
+func describeTargetGroups(ctx context.Context, c *elasticloadbalancingv2.Client, arn string) ([]types.TargetGroup, error) {
+	var tgs []types.TargetGroup
+
+	p := elasticloadbalancingv2.NewDescribeTargetGroupsPaginator(
+		c, &elasticloadbalancingv2.DescribeTargetGroupsInput{LoadBalancerArn: &arn},
+	)
+
+	for p.HasMorePages() {
+		page, err := p.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		tgs = append(tgs, page.TargetGroups...)
+	}
+
+	if len(tgs) > 0 {
+		return tgs, nil
+	}
+	return nil, nil
+}
+
+func describeTargetHealth(ctx context.Context, c *elasticloadbalancingv2.Client, arn string) ([]types.TargetHealthDescription, error) {
+	out, err := c.DescribeTargetHealth(ctx, &elasticloadbalancingv2.DescribeTargetHealthInput{
+		TargetGroupArn: &arn,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(out.TargetHealthDescriptions) > 0 {
+		return out.TargetHealthDescriptions, nil
+	}
+	return nil, nil
+}

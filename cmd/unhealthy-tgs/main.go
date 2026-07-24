@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/mattn/go-isatty"
@@ -70,9 +72,10 @@ func main() {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	ut.IsErr(err, 201)
 
+	client := elasticloadbalancingv2.NewFromConfig(cfg)
+
 	var arns []string
 	if n := len(os.Args); isatty.IsTerminal(os.Stdin.Fd()) && n > 1 {
-		client := elasticloadbalancingv2.NewFromConfig(cfg)
 		lbs, err := describeLoadBalancers(ctx, client)
 		ut.IsErr(err, 201)
 
@@ -108,9 +111,42 @@ func main() {
 		}
 		ut.IsErr(scanner.Err(), 201, "scanner.Err()")
 	}
-	// for i := 0; i < len(arns); i++ {
-	// 	fmt.Println(arns[i])
-	// }
-	spew.Dump(arns)
+
+	for i := 0; i < len(arns); i++ {
+		tgs, err := describeTargetGroups(ctx, client, arns[i])
+		if err == nil {
+			printed := false
+			for _, tg := range tgs {
+				ths, err := describeTargetHealth(ctx, client, *tg.TargetGroupArn)
+				if err != nil {
+					ut.IsErr(err, -1)
+					continue
+				}
+				if len(ths) > 0 {
+					healthy := false
+					for _, th := range ths {
+						if th.TargetHealth.State == types.TargetHealthStateEnumHealthy {
+							healthy = true
+							break
+						}
+					}
+					if !healthy {
+						if !printed {
+							fmt.Println(arns[i])
+							printed = true
+						}
+						fmt.Println(" ", *tg.TargetGroupArn, "unhealthy")
+					}
+				}
+			}
+			if printed {
+				fmt.Println()
+			}
+		} else {
+			ut.IsErr(err, -1)
+		}
+	}
+
 	os.Exit(0)
+	spew.Dump(arns)
 }
