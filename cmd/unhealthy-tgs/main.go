@@ -30,19 +30,24 @@ var eiTags = map[string]bool{
 	"ei:provisioning-source": false,
 }
 
-func arnsByTags(ctx context.Context, c *elasticloadbalancingv2.Client, tags map[string]bool, arns map[string]string) []string {
+type lbInfoT struct {
+	env string
+	idx int
+}
+
+func arnsByTags(ctx context.Context, c *elasticloadbalancingv2.Client, tags map[string]bool, arns map[string]lbInfoT) map[string]int {
 	if len(arns) > 0 {
 		out, err := c.DescribeTags(
 			ctx, &elasticloadbalancingv2.DescribeTagsInput{ResourceArns: ut.Keys(arns)},
 		)
 		if err == nil {
-			var result []string
+			result := make(map[string]int, len(arns))
 			for _, td := range out.TagDescriptions {
-				if env, ok := arns[*td.ResourceArn]; ok {
-					envPath := env2path(env)
+				if info, ok := arns[*td.ResourceArn]; ok {
+					envPath := env2path(info.env)
 					for _, tag := range td.Tags {
-						if strict, ok := tags[*tag.Key]; ok && (strict && *tag.Value == env || !strict && strings.Contains(*tag.Value, envPath)) {
-							result = append(result, *td.ResourceArn)
+						if strict, ok := tags[*tag.Key]; ok && (strict && *tag.Value == info.env || !strict && strings.Contains(*tag.Value, envPath)) {
+							result[*td.ResourceArn] = info.idx
 							break
 						}
 					}
@@ -72,8 +77,7 @@ func main() {
 		ut.IsErr(err, 201)
 
 		arns = make([]string, 0, (n-1)*len(lbs)/16) // estimatedLoadBalancerCount
-		chunk := make(map[string]string, maxDescribeTagsResources)
-		indexes := make(map[string]int, maxDescribeTagsResources)
+		chunk := make(map[string]lbInfoT, maxDescribeTagsResources)
 
 		for i := 1; i < n; i++ {
 			for j := 0; j < len(lbs); j++ {
@@ -82,22 +86,19 @@ func main() {
 						arns = append(arns, *lbs[j].LoadBalancerArn)
 						lbs[j].LoadBalancerArn = nil
 					} else {
-						chunk[*lbs[j].LoadBalancerArn] = os.Args[i]
-						indexes[*lbs[j].LoadBalancerArn] = j
+						chunk[*lbs[j].LoadBalancerArn] = lbInfoT{env: os.Args[i], idx: j}
 						if len(chunk) == maxDescribeTagsResources {
-							appends := arnsByTags(ctx, client, eiTags, chunk)
-							arns = append(arns, appends...)
-							for _, arn := range appends {
-								lbs[indexes[arn]].LoadBalancerArn = nil
+							for arn, idx := range arnsByTags(ctx, client, eiTags, chunk) {
+								arns = append(arns, arn)
+								lbs[idx].LoadBalancerArn = nil
 							}
 							clear(chunk)
-							clear(indexes)
 						}
 					}
 				}
 			}
 		}
-		arns = append(arns, arnsByTags(ctx, client, eiTags, chunk)...)
+		arns = append(arns, ut.Keys(arnsByTags(ctx, client, eiTags, chunk))...)
 	} else {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
