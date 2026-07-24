@@ -1,5 +1,11 @@
 package main
 
+import (
+	"bufio"
+	"bytes"
+	"io"
+)
+
 const (
 	e2pSep    = "/"
 	e2pStLet  = 'h'
@@ -21,4 +27,23 @@ func env2path(s string) string {
 	}
 
 	return e2pSep + s + e2pSep
+}
+
+// readArns reads non-empty, whitespace-trimmed lines from r and returns them
+// as a slice. Empty lines are ignored.
+func readArns(r io.Reader) ([]string, error) {
+	var arns []string
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		if line := bytes.TrimSpace(scanner.Bytes()); len(line) > 0 { // line is valid until next scanner.Scan() call
+			arns = append(arns, string(line))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if len(arns) > 0 {
+		return arns, nil
+	}
+	return nil, nil
 }
