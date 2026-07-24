@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
@@ -164,7 +165,7 @@ func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []st
 	}
 
 	if len(arns) > 0 {
-		return arns, nil
+		return ut.Arrange(arns), nil
 	}
 	return nil, nil
 }
@@ -172,7 +173,7 @@ func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []st
 // printUnhealthy checks all target groups associated with the specified load
 // balancers and reports target groups that contain targets but none in the
 // Healthy state. It returns the total number of such target groups.
-func printUnhealthy(ctx context.Context, c *elasticloadbalancingv2.Client, arns []string) int {
+func printUnhealthy(ctx context.Context, c *elasticloadbalancingv2.Client, w io.Writer, arns []string) int {
 	count := 0
 	for i := 0; i < len(arns); i++ {
 		tgs, err := describeTargetGroups(ctx, c, arns[i])
@@ -194,16 +195,16 @@ func printUnhealthy(ctx context.Context, c *elasticloadbalancingv2.Client, arns 
 					}
 					if !healthy {
 						if !printed {
-							fmt.Println(arns[i])
+							fmt.Fprintln(w, arns[i])
 							printed = true
 						}
-						fmt.Println(" ", *tg.TargetGroupArn, "unhealthy")
+						fmt.Fprintln(w, " ", *tg.TargetGroupArn, "unhealthy")
 						count++
 					}
 				}
 			}
 			if printed {
-				fmt.Println()
+				fmt.Fprintln(w)
 			}
 		} else {
 			ut.IsErr(err, -1)

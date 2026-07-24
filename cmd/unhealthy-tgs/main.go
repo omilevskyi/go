@@ -31,7 +31,7 @@ func main() {
 		ut.IsErr(err, 201, "readArns()")
 	}
 
-	if printUnhealthy(ctx, client, arns) > 0 {
+	if printUnhealthy(ctx, client, os.Stdout, arns) > 0 {
 		os.Exit(1)
 		spew.Dump(arns)
 	}
