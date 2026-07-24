@@ -3,4 +3,5 @@ go 1.26
 use (
 	.
 	./cmd/generic2notes
+	./cmd/unhealthy-tgs
 )
