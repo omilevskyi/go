@@ -26,6 +26,10 @@ jobs:
         id: changed
         run: |
           set -euxo pipefail
+          echo 1
+          git --no-pager diff --no-color --name-only origin/main...HEAD
+          echo 2
+          git --no-pager diff --no-color --name-only origin/main...HEAD | sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p'
           APPS=$(
             git --no-pager diff --no-color --name-only origin/main...HEAD |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
