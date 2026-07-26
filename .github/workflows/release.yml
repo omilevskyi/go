@@ -25,17 +25,16 @@ jobs:
       - name: Detect changed apps
         id: changed
         run: |
-          set -euxo pipefail
-          version=$(
+          VERSION=$(
             git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
             head --lines=1
           )
           APPS=$(
-            git --no-pager diff --no-color --name-only "${version}"...HEAD |
+            git --no-pager diff --no-color --name-only "${VERSION}"...HEAD |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
             sort --unique
           )
-          echo "apps=${APPS}" | tee --append "${GITHUB_OUTPUT}"
+          echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
 
       - name: Save commit message to file
         if: steps.changed.outputs.apps != ''
