@@ -1,0 +1,85 @@
+---
+name: Publish release
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }} # pick PR's HEAD instead of merge commit
+          fetch-depth: 0
+          show-progress: "false"
+
+      - name: Save commit message to file
+        id: commit
+        run: |
+          FILE=$(mktemp --tmpdir=${{ runner.temp }})
+          set -o pipefail && git --no-pager log -1 --no-color --pretty=%B | tee "${FILE}"
+          echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
+
+      - name: Verify if commit is conventional
+        uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
+        with:
+          command: verify
+          args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.commit.outputs.file }}
+
+      - name: Remove temporary file
+        run: rm --force -- ${{ steps.commit.outputs.file }}
+
+      - name: Get next version
+        id: version
+        run: |
+          NEXT=$(cog bump --auto --dry-run | sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p')
+          echo "next=${NEXT}" >>"${GITHUB_OUTPUT}"
+
+      - name: Setup Go
+        if: steps.version.outputs.next != ''
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+          check-latest: true
+          cache: true
+
+      - name: Disable Go telemetry
+        if: steps.version.outputs.next != ''
+        run: go telemetry off
+
+      - name: Run tests
+        if: steps.version.outputs.next != ''
+        run: go test -v ./...
+
+      - name: Push next version
+        if: steps.version.outputs.next != ''
+        run: |
+          git --no-pager config user.name 'Publish Release'
+          git --no-pager config user.email 'publish-release@github.com'
+          git --no-pager tag --force --annotate 'v${{ steps.version.outputs.next }}' --message 'v${{ steps.version.outputs.next }}'
+          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.version.outputs.next }}'
+
+      - name: Install Cosign
+        if: steps.version.outputs.next != ''
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.2
+
+      - name: Run GoReleaser
+        if: steps.version.outputs.next != ''
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
