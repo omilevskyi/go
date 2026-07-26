@@ -7,10 +7,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/mattn/go-isatty"
 	ut "github.com/omilevskyi/go/pkg/utils"
+	// "github.com/davecgh/go-spew/spew"
 )
 
 func main() {
@@ -33,6 +33,6 @@ func main() {
 
 	if printUnhealthy(ctx, client, os.Stdout, arns) > 0 {
 		os.Exit(1)
-		spew.Dump(arns)
+		// spew.Dump(arns) //
 	}
 }

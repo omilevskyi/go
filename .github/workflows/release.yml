@@ -25,15 +25,20 @@ jobs:
       - name: Detect changed apps
         id: changed
         run: |
-          APPS=$(
-            git --no-pager diff --name-only origin/main...HEAD |
-            awk -F/ '/^cmd\/[^/]+\// {print $2}' |
-            sort --unique |
-            paste --serial --delimiters=,
+          set -euxo pipefail
+          version=$(
+            git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
+            head --lines=1
           )
-          echo "apps=${APPS}" >> "${GITHUB_OUTPUT}"
+          APPS=$(
+            git --no-pager diff --no-color --name-only "${version}"...HEAD |
+            sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
+            sort --unique
+          )
+          echo "apps=${APPS}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Save commit message to file
+        if: steps.changed.outputs.apps != ''
         id: commit
         run: |
           FILE=$(mktemp --tmpdir=${{ runner.temp }})
@@ -41,15 +46,18 @@ jobs:
           echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
 
       - name: Verify if commit is conventional
+        if: steps.changed.outputs.apps != ''
         uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
         with:
           command: verify
           args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.commit.outputs.file }}
 
       - name: Remove temporary file
+        if: steps.changed.outputs.apps != ''
         run: rm --force -- ${{ steps.commit.outputs.file }}
 
       - name: Get next version
+        if: steps.changed.outputs.apps != ''
         id: version
         run: |
           NEXT=$(cog bump --auto --dry-run | sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p')
@@ -81,16 +89,24 @@ jobs:
           git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.version.outputs.next }}'
 
       - name: Install Cosign
-        if: steps.version.outputs.next != ''
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: v3.1.2
 
-      - name: Run GoReleaser
-        if: steps.version.outputs.next != ''
+      - name: Install GoReleaser
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: "~> v2"
-          args: release --clean
+          install-only: true
+
+      - name: Run GoReleaser
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
+        run: |
+          for app in ${{ steps.changed.outputs.apps }}; do
+            FILE=".goreleaser.${app}.yml"
+            test -f "${FILE}" && goreleaser release --config "${FILE}" --clean
+          done
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
