@@ -26,12 +26,12 @@ jobs:
         id: changed
         run: |
           set -euxo pipefail
-          echo 1
-          git --no-pager diff --no-color --name-only origin/main...HEAD
-          echo 2
-          git --no-pager diff --no-color --name-only origin/main...HEAD | sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p'
+          version=$(
+            git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
+            head --lines=1
+          )
           APPS=$(
-            git --no-pager diff --no-color --name-only origin/main...HEAD |
+            git --no-pager diff --no-color --name-only "${version}"...HEAD |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
             sort --unique
           )
