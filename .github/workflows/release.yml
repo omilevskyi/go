@@ -27,7 +27,7 @@ jobs:
         run: |
           APPS=$(
             git --no-pager diff --no-color --name-only origin/main...HEAD |
-            sed --silent --regexp-extended 's,^(cmd|pkg)/([^/]+).*,\1,p |
+            sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
             sort --unique
           )
           echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
@@ -84,20 +84,20 @@ jobs:
           git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.version.outputs.next }}'
 
       - name: Install Cosign
-        if: steps.version.outputs.next != ''
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: v3.1.2
 
       - name: Install GoReleaser
-        if: steps.version.outputs.next != ''
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: "~> v2"
           install-only: true
 
       - name: Run GoReleaser
-        if: steps.version.outputs.next != ''
+        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
         run: |
           for app in ${{ steps.changed.outputs.apps }}; do
             FILE=".goreleaser.${app}.yml"
