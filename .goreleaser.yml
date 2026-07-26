@@ -6,6 +6,8 @@ before:
   hooks:
     - go mod tidy
 
+project_name: "{{ .Env.APP_NAME }}"
+
 # https://goreleaser.com/customization/build/
 builds:
   - id: generic2notes
@@ -53,8 +55,9 @@ builds:
 # https://goreleaser.com/customization/archive/
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    formats: ["zip"]
+    allow_different_binary_count: true
     strip_binary_directory: true
+    formats: ["zip"]
     files: []
 
 # https://goreleaser.com/customization/checksum/

@@ -22,6 +22,17 @@ jobs:
           fetch-depth: 0
           show-progress: "false"
 
+      - name: Detect changed apps
+        id: changed
+        run: |
+          APPS=$(
+            git --no-pager diff --name-only origin/main...HEAD |
+            awk -F/ '/^cmd\/[^/]+\// {print $2}' |
+            sort --unique |
+            paste --serial --delimiters=,
+          )
+          echo "apps=${APPS}" >> "${GITHUB_OUTPUT}"
+
       - name: Save commit message to file
         id: commit
         run: |
