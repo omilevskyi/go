@@ -33,6 +33,6 @@ func main() {
 
 	if printUnhealthy(ctx, client, os.Stdout, arns) > 0 {
 		os.Exit(1)
-		// spew.Dump(arns) //
+		// spew.Dump(arns)
 	}
 }

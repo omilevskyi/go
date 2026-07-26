@@ -30,7 +30,7 @@ jobs:
             sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
             sort --unique
           )
-          echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
+          echo "apps=${APPS}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Save commit message to file
         if: steps.changed.outputs.apps != ''
