@@ -25,6 +25,7 @@ jobs:
       - name: Detect changed apps
         id: changed
         run: |
+          set -euxo pipefail
           APPS=$(
             git --no-pager diff --no-color --name-only origin/main...HEAD |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
@@ -32,7 +33,7 @@ jobs:
           )
           echo "apps=${APPS}" | tee --append "${GITHUB_OUTPUT}"
 
-      - name: Save commit message to file
+      - name: Save commit message to file ${{ steps.changed.outputs.apps }}
         if: steps.changed.outputs.apps != ''
         id: commit
         run: |
