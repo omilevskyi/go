@@ -11,9 +11,9 @@ before:
 
 # https://goreleaser.com/customization/build/
 builds:
-  - id: {{ .ProjectName }}
-    main: ./cmd/{{ .ProjectName }}
-    binary: {{ .ProjectName }}
+  - id: "{{ .ProjectName }}"
+    main: "./cmd/{{ .ProjectName }}"
+    binary: "{{ .ProjectName }}"
     env:
       - CGO_ENABLED=0
     mod_timestamp: "{{ .CommitTimestamp }}" # https://goreleaser.com/customization/templates/
