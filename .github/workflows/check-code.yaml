@@ -16,17 +16,30 @@ jobs:
         with:
           show-progress: "false"
 
+      - name: Detect changed .go files
+        id: changed
+        run: |
+          FILES=$(
+            git --no-pager diff --no-color --name-only origin/main...HEAD |
+            sed --silent --regexp-extended 's,^(\.go$),\1,p' |
+            sort --unique
+          )
+          echo "files=${FILES}" >>"${GITHUB_OUTPUT}"
+
       - name: Goimports Check
+        if: steps.changed.outputs.files != ''
         uses: DarthBenro008/goimports-check-action@edb8a5c344735b301d632f58da7f9d56b11fbd7d # v0.2.0
         with:
           root-path: "./"
 
       - name: golangci-lint
+        if: steps.changed.outputs.files != ''
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.11
 
       - name: Setup Go
+        if: steps.changed.outputs.files != ''
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -34,7 +47,9 @@ jobs:
           cache: true
 
       - name: Disable Go telemetry
+        if: steps.changed.outputs.files != ''
         run: go telemetry off
 
       - name: Run tests
+        if: steps.changed.outputs.files != ''
         run: go test -v ./...
