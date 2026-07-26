@@ -108,3 +108,5 @@ jobs:
             FILE=".goreleaser.${app}.yml"
             test -f "${FILE}" && goreleaser release --config "${FILE}" --clean
           done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
