@@ -2,17 +2,18 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
+# https://goreleaser.com/customization/project/
+project_name: generic2notes
+
 before:
   hooks:
     - go mod tidy
 
-project_name: "{{ .Env.APP_NAME }}"
-
 # https://goreleaser.com/customization/build/
 builds:
-  - id: generic2notes
-    main: ./cmd/generic2notes
-    binary: generic2notes
+  - id: {{ .ProjectName }}
+    main: ./cmd/{{ .ProjectName }}
+    binary: {{ .ProjectName }}
     env:
       - CGO_ENABLED=0
     mod_timestamp: "{{ .CommitTimestamp }}" # https://goreleaser.com/customization/templates/
@@ -27,53 +28,19 @@ builds:
       - freebsd
     goarch:
       - amd64
-
-  - id: unhealthy-tgs
-    main: ./cmd/unhealthy-tgs
-    binary: unhealthy-tgs
-    env:
-      - CGO_ENABLED=0
-    mod_timestamp: "{{ .CommitTimestamp }}" # https://goreleaser.com/customization/templates/
-    tags:
-      - static_build
-    flags:
-      - -trimpath
-      - -buildvcs=false
-    ldflags:
-      - -s -w
-      - -X main.version={{ .Version }}
-      - -X main.gitCommit={{ .ShortCommit }}
-    goos:
-      - darwin
-      - freebsd
-      - linux
-      - windows
-    goarch:
-      - amd64
-      - arm64
 
 # https://goreleaser.com/customization/archive/
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    allow_different_binary_count: true
     strip_binary_directory: true
     formats: ["zip"]
     files: []
-
-# https://goreleaser.com/customization/checksum/
-checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
-  algorithm: sha256
-  disable: true
 
 # https://goreleaser.com/customization/changelog/
 changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
       - Merge pull request
       - Merge branch
 
@@ -84,6 +51,11 @@ release:
   use_existing_draft: true
   replace_existing_artifacts: true
   mode: replace
+
+# https://goreleaser.com/customization/checksum/
+checksum:
+  # algorithm: sha256 # default
+  name_template: "{{ .ProjectName }}_{{ .Version }}.sha256"
 
 # https://goreleaser.com/customization/sign/sign/#signing-with-cosign
 # cosign verify-blob --bundle file.tar.gz.sigstore.json file.tar.gz
