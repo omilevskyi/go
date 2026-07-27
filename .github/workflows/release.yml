@@ -27,7 +27,7 @@ jobs:
         run: |
           LAST_VERSION=$(
             git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
-            sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p' |
+            grep --extended-regexp '^v[[:digit:].]+$' |
             head --lines=1
           )
           echo "version=${LAST_VERSION}" >>"${GITHUB_OUTPUT}"
