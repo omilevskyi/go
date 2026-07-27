@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+# https://goreleaser.com/customization/project/
+project_name: obsolete-packages
+
+before:
+  hooks:
+    - go mod tidy
+
+# https://goreleaser.com/customization/build/
+builds:
+  - id: "{{ .ProjectName }}"
+    main: "./cmd/{{ .ProjectName }}"
+    binary: "{{ .ProjectName }}"
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}" # https://goreleaser.com/customization/templates/
+    tags:
+      - static_build
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X main.version=v{{ .Version }}
+      - -X main.gitCommit={{ .ShortCommit }}
+      - -X main.makeBin=/usr/bin/make
+    goos:
+      - freebsd
+    goarch:
+      - 386
+      - amd64
+      - arm64
+
+# https://goreleaser.com/customization/archive/
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    strip_binary_directory: true
+    formats: ["zip"]
+    files: []
+
+# https://goreleaser.com/customization/changelog/
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - Merge pull request
+      - Merge branch
+
+# https://goreleaser.com/customization/release/
+release:
+  # draft: true # if set to true, will not auto-publish the release
+  # replace_existing_draft: true # only effective if draft is set to true
+  use_existing_draft: true
+  replace_existing_artifacts: true
+  mode: replace
+
+# https://goreleaser.com/customization/checksum/
+checksum:
+  # algorithm: sha256 # default
+  name_template: "{{ .ProjectName }}_{{ .Version }}.sha256"
+
+# https://goreleaser.com/customization/sign/sign/#signing-with-cosign
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    output: true
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"

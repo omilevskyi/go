@@ -3,6 +3,7 @@ go 1.26
 use (
 	.
 	./cmd/generic2notes
+	./cmd/obsolete-packages
 	./cmd/portsindexup
 	./cmd/strip-merge
 	./cmd/unhealthy-tgs
