@@ -27,6 +27,7 @@ jobs:
         run: |
           LAST_VERSION=$(
             git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
+            sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p' |
             head --lines=1
           )
           echo "version=${LAST_VERSION}" >>"${GITHUB_OUTPUT}"
@@ -100,8 +101,8 @@ jobs:
         run: |
           git --no-pager config user.name 'Publish Release'
           git --no-pager config user.email 'publish-release@github.com'
-          git --no-pager tag --force --annotate 'v${{ steps.last.outputs.version }}' --message 'v${{ steps.last.outputs.version }}'
-          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.last.outputs.version }}'
+          git --no-pager tag --force --annotate 'v${{ steps.next.outputs.version }}' --message 'v${{ steps.next.outputs.version }}'
+          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.next.outputs.version }}'
 
       - name: Install Cosign
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
