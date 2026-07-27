@@ -8,5 +8,6 @@ Makefile
 Makefile.local
 vendor/
 generic2notes/generic2notes
+portsindexup/portsindexup
 strip-merge/strip-merge
 unhealthy-tgs/unhealthy-tgs
