@@ -8,4 +8,5 @@ Makefile
 Makefile.local
 vendor/
 generic2notes/generic2notes
+strip-merge/strip-merge
 unhealthy-tgs/unhealthy-tgs
