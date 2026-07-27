@@ -37,7 +37,7 @@ jobs:
         run: |
           APPS=$(
             git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' |
-            sed --silent --regexp-extended 's,^cmd/([^/]+).*\.go$,\1,p' |
+            sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
           )
           echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
@@ -47,7 +47,8 @@ jobs:
         run: |
           set -o pipefail
           if [ -n '${{ steps.changed.outputs.apps }}' ] ||
-            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' | grep --silent '\.go$'; then
+            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' |
+            grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
             echo 'altered=false' >>"${GITHUB_OUTPUT}"

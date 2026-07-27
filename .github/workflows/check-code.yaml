@@ -21,7 +21,8 @@ jobs:
         id: go
         run: |
           set -o pipefail
-          if git --no-pager diff --no-color --name-only 'origin/${{ github.event.repository.default_branch }}...HEAD' | grep --silent '\.go$'; then
+          if git --no-pager diff --no-color --name-only 'origin/${{ github.event.repository.default_branch }}...HEAD' |
+            grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
             echo 'altered=false' >>"${GITHUB_OUTPUT}"
