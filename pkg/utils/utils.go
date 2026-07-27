@@ -163,7 +163,7 @@ func Compact(slice []string) []string {
 func deleteItems[T comparable](slicePtr *[]T, targets ...T) {
 	if slicePtr != nil {
 		s, slen, j := *slicePtr, len(*slicePtr), 0
-		for i := 0; i < slen; i++ {
+		for i := range slen {
 			if !slices.Contains(targets, s[i]) {
 				s[j] = s[i]
 				j++
@@ -185,7 +185,7 @@ func CompactCopy(slice []string) []string {
 func deleteItemsCopy[T comparable](slice []T, targets ...T) []T {
 	if slen := len(slice); slen > 0 {
 		j := 0
-		for i := 0; i < slen; i++ {
+		for i := range slen {
 			if !slices.Contains(targets, slice[i]) {
 				j++
 			}
@@ -208,7 +208,7 @@ func deleteItemsCopy[T comparable](slice []T, targets ...T) []T {
 func Distinct[T comparable](slice []T) []T {
 	if slen := len(slice); slen > 0 {
 		seen, j := make(map[T]struct{}, slen), 0
-		for i := 0; i < slen; i++ {
+		for i := range slen {
 			if _, ok := seen[slice[i]]; !ok {
 				seen[slice[i]] = struct{}{}
 				if j < i {
@@ -228,7 +228,7 @@ func Distinct[T comparable](slice []T) []T {
 func DistinctCopy[T comparable](slice []T) []T {
 	if slen := len(slice); slen > 0 {
 		result, seen, j := make([]T, slen), make(map[T]struct{}, slen), 0
-		for i := 0; i < slen; i++ {
+		for i := range slen {
 			if _, ok := seen[slice[i]]; !ok {
 				seen[slice[i]] = struct{}{}
 				result[j] = slice[i]
@@ -380,7 +380,7 @@ func ToLowerASCII(b byte) byte {
 
 // ContainedSubstring returns first string from slice that is substring of string s
 func ContainedSubstring(s string, slice []string) string {
-	for i := 0; i < len(slice); i++ {
+	for i := range slice {
 		if strings.Contains(s, slice[i]) {
 			return slice[i]
 		}
