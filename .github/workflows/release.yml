@@ -22,48 +22,64 @@ jobs:
           fetch-depth: 0
           show-progress: "false"
 
-      - name: Detect changed apps
-        id: changed
+      - name: Get last version
+        id: last
         run: |
-          VERSION=$(
+          LAST_VERSION=$(
             git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
             head --lines=1
           )
+          echo "version=${LAST_VERSION}" >>"${GITHUB_OUTPUT}"
+
+      - name: Get changed applications
+        id: changed
+        run: |
           APPS=$(
-            git --no-pager diff --no-color --name-only "${VERSION}"...HEAD |
-            sed --silent --regexp-extended 's,^cmd/([^/]+).*,\1,p' |
+            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' |
+            sed --silent --regexp-extended 's,^cmd/([^/]+).*\.go$,\1,p' |
             sort --unique
           )
           echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
 
+      - name: Get modified .go files compared to ${{ steps.last.outputs.version }}
+        id: go
+        run: |
+          set -o pipefail
+          if [ -n '${{ steps.changed.outputs.apps }}' ] ||
+            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' | grep --silent '\.go$'; then
+            echo 'altered=true' >>"${GITHUB_OUTPUT}"
+          else
+            echo 'altered=false' >>"${GITHUB_OUTPUT}"
+          fi
+
       - name: Save commit message to file
-        if: steps.changed.outputs.apps != ''
         id: commit
+        if: steps.go.outputs.altered == 'true'
         run: |
           FILE=$(mktemp --tmpdir=${{ runner.temp }})
-          set -o pipefail && git --no-pager log -1 --no-color --pretty=%B | tee "${FILE}"
+          git --no-pager log -1 --no-color --pretty=%B >"${FILE}"
           echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
 
       - name: Verify if commit is conventional
-        if: steps.changed.outputs.apps != ''
+        if: steps.go.outputs.altered == 'true'
         uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
         with:
           command: verify
           args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.commit.outputs.file }}
 
       - name: Remove temporary file
-        if: steps.changed.outputs.apps != ''
+        if: steps.go.outputs.altered == 'true'
         run: rm --force -- ${{ steps.commit.outputs.file }}
 
       - name: Get next version
-        if: steps.changed.outputs.apps != ''
-        id: version
+        id: next
+        if: steps.go.outputs.altered == 'true'
         run: |
           NEXT=$(cog bump --auto --dry-run | sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p')
-          echo "next=${NEXT}" >>"${GITHUB_OUTPUT}"
+          echo "version=${NEXT}" >>"${GITHUB_OUTPUT}"
 
       - name: Setup Go
-        if: steps.version.outputs.next != ''
+        if: steps.go.outputs.altered == 'true'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -72,36 +88,36 @@ jobs:
           cache: true
 
       - name: Disable Go telemetry
-        if: steps.version.outputs.next != ''
+        if: steps.go.outputs.altered == 'true'
         run: go telemetry off
 
       - name: Run tests
-        if: steps.version.outputs.next != ''
+        if: steps.go.outputs.altered == 'true'
         run: go test -v ./...
 
       - name: Push next version
-        if: steps.version.outputs.next != ''
+        if: steps.next.outputs.version != ''
         run: |
           git --no-pager config user.name 'Publish Release'
           git --no-pager config user.email 'publish-release@github.com'
-          git --no-pager tag --force --annotate 'v${{ steps.version.outputs.next }}' --message 'v${{ steps.version.outputs.next }}'
-          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.version.outputs.next }}'
+          git --no-pager tag --force --annotate 'v${{ steps.last.outputs.version }}' --message 'v${{ steps.last.outputs.version }}'
+          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.last.outputs.version }}'
 
       - name: Install Cosign
-        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: v3.1.2
 
       - name: Install GoReleaser
-        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: "~> v2"
           install-only: true
 
       - name: Run GoReleaser
-        if: steps.changed.outputs.apps != '' && steps.version.outputs.next != ''
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           for app in ${{ steps.changed.outputs.apps }}; do
             FILE=".goreleaser.${app}.yml"
@@ -109,3 +125,24 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download bundle(s)
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
+        run: |
+          for app in ${{ steps.changed.outputs.apps }}; do
+            gh release download 'v${{ steps.next.outputs.version }}' \
+              --pattern "${app}_${{ steps.next.outputs.version }}.sha256.sigstore.json"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify v${{ steps.next.outputs.version }}
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
+        run: |
+          for app in ${{ steps.changed.outputs.apps }}; do
+            cosign verify-blob \
+              --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              --bundle "${app}_${{ steps.next.outputs.version }}.sha256.sigstore.json" \
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${{ steps.next.outputs.version }}/${app}_${{ steps.next.outputs.version }}.sha256"
+          done

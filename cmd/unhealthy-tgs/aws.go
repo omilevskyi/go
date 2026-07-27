@@ -25,6 +25,7 @@ type lbInfoT struct {
 var eiTags = map[string]bool{
 	"Environment":            true,
 	"ei:environment":         true,
+	"ProvisioningSource":     false,
 	"ei:provisioning-source": false,
 }
 
