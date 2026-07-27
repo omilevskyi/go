@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.31
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.58.1
 	github.com/mattn/go-isatty v0.0.24
-	github.com/omilevskyi/go v0.0.5
+	github.com/omilevskyi/go v0.1.1
 )
 
 require (

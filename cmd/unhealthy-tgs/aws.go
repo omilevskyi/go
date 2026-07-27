@@ -8,6 +8,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
+
+	"github.com/omilevskyi/go/pkg/aws"
 	ut "github.com/omilevskyi/go/pkg/utils"
 )
 
@@ -27,68 +29,6 @@ var eiTags = map[string]bool{
 	"ei:environment":         true,
 	"ProvisioningSource":     false,
 	"ei:provisioning-source": false,
-}
-
-// describeLoadBalancers hides ELBv2 pagination and returns all load balancers
-// as a single slice.
-func describeLoadBalancers(ctx context.Context, c *elasticloadbalancingv2.Client) ([]types.LoadBalancer, error) {
-	var lbs []types.LoadBalancer
-
-	p := elasticloadbalancingv2.NewDescribeLoadBalancersPaginator(
-		c, &elasticloadbalancingv2.DescribeLoadBalancersInput{},
-	)
-
-	for p.HasMorePages() {
-		page, err := p.NextPage(ctx)
-		if err != nil {
-			return nil, err
-		}
-		lbs = append(lbs, page.LoadBalancers...)
-	}
-
-	if len(lbs) > 0 {
-		return lbs, nil
-	}
-	return nil, nil
-}
-
-// describeTargetGroups hides ELBv2 pagination and returns all target groups
-// as a single slice.
-func describeTargetGroups(ctx context.Context, c *elasticloadbalancingv2.Client, arn string) ([]types.TargetGroup, error) {
-	var tgs []types.TargetGroup
-
-	p := elasticloadbalancingv2.NewDescribeTargetGroupsPaginator(
-		c, &elasticloadbalancingv2.DescribeTargetGroupsInput{LoadBalancerArn: &arn},
-	)
-
-	for p.HasMorePages() {
-		page, err := p.NextPage(ctx)
-		if err != nil {
-			return nil, err
-		}
-		tgs = append(tgs, page.TargetGroups...)
-	}
-
-	if len(tgs) > 0 {
-		return tgs, nil
-	}
-	return nil, nil
-}
-
-// describeTargetHealth retrieves the registered targets of a target group and
-// their health information.
-func describeTargetHealth(ctx context.Context, c *elasticloadbalancingv2.Client, arn string) ([]types.TargetHealthDescription, error) {
-	out, err := c.DescribeTargetHealth(ctx, &elasticloadbalancingv2.DescribeTargetHealthInput{
-		TargetGroupArn: &arn,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(out.TargetHealthDescriptions) > 0 {
-		return out.TargetHealthDescriptions, nil
-	}
-	return nil, nil
 }
 
 // arnsByTags returns ARNs of load balancers whose tags match the environment
@@ -127,7 +67,7 @@ func arnsByTags(ctx context.Context, c *elasticloadbalancingv2.Client, tags map[
 // environment matching rules. When no environments are specified, all load
 // balancer ARNs are returned.
 func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []string) ([]string, error) {
-	lbs, err := describeLoadBalancers(ctx, c)
+	lbs, err := aws.DescribeLoadBalancers(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +77,8 @@ func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []st
 		if m := len(envs); m > 0 {
 			chunk := make(map[string]lbInfoT, maxDescribeTagsResources)
 			arns = make([]string, 0, m*n/16)
-			for i := 0; i < m; i++ {
-				for j := 0; j < n; j++ {
+			for i := range m {
+				for j := range n {
 					if lbs[j].LoadBalancerArn != nil {
 						if strings.HasPrefix(*lbs[j].LoadBalancerName, envs[i]+eiSep) || strings.HasSuffix(*lbs[j].LoadBalancerName, eiSep+envs[i]) {
 							arns = append(arns, *lbs[j].LoadBalancerArn)
@@ -159,7 +99,7 @@ func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []st
 			arns = append(arns, ut.Keys(arnsByTags(ctx, c, eiTags, chunk))...)
 		} else {
 			arns = make([]string, 0, n)
-			for j := 0; j < n; j++ {
+			for j := range n {
 				arns = append(arns, *lbs[j].LoadBalancerArn)
 			}
 		}
@@ -176,12 +116,12 @@ func filterArns(ctx context.Context, c *elasticloadbalancingv2.Client, envs []st
 // Healthy state. It returns the total number of such target groups.
 func printUnhealthy(ctx context.Context, c *elasticloadbalancingv2.Client, w io.Writer, arns []string) int {
 	count := 0
-	for i := 0; i < len(arns); i++ {
-		tgs, err := describeTargetGroups(ctx, c, arns[i])
+	for i := range arns {
+		tgs, err := aws.DescribeTargetGroups(ctx, c, arns[i])
 		if err == nil {
 			printed := false
 			for _, tg := range tgs {
-				ths, err := describeTargetHealth(ctx, c, *tg.TargetGroupArn)
+				ths, err := aws.DescribeTargetHealth(ctx, c, *tg.TargetGroupArn)
 				if err != nil {
 					ut.IsErr(err, -1)
 					continue
