@@ -64,14 +64,13 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}.sha256"
 
 # https://goreleaser.com/customization/sign/sign/#signing-with-cosign
-# cosign verify-blob --bundle file.tar.gz.sigstore.json file.tar.gz
 signs:
   - cmd: cosign
-    signature: "${artifact}.sigstore.json"
     artifacts: checksum
+    signature: "${artifact}.sigstore.json"
     output: true
     args:
-      - sign-blob
+      - "sign-blob"
       - "--bundle=${signature}"
       - "${artifact}"
       - "--yes"
