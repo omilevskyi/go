@@ -21,7 +21,7 @@ func lineCount(b []byte) int {
 	n := 0
 	if l := len(b); l > 0 {
 		n = 1
-		for i := 0; i < l; i++ {
+		for i := range l {
 			if b[i] == lf {
 				n++
 			}
@@ -143,12 +143,12 @@ func keywordValue(b []byte) (keyword, value []byte) {
 // concat efficiently joins multiple byte slices into a single string
 func concat(parts ...[]byte) string {
 	l, n := len(parts), 0
-	for i := 0; i < l; i++ {
+	for i := range l {
 		n += len(parts[i])
 	}
 
 	b := make([]byte, 0, n)
-	for i := 0; i < l; i++ {
+	for i := range l {
 		b = append(b, parts[i]...)
 	}
 

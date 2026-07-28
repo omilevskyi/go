@@ -122,7 +122,7 @@ jobs:
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           for app in ${{ steps.changed.outputs.apps }}; do
-            FILE=".goreleaser.${app}.yml"
+            FILE=".goreleaser/${app}.yml"
             test -f "${FILE}" && goreleaser release --config "${FILE}" --clean
           done
         env:
