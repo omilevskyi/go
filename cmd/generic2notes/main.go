@@ -58,7 +58,7 @@ func writeLines(filepath string, lines [][]byte) error {
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 
-	for i := 0; i < len(lines); i++ {
+	for i := range lines {
 		// switch {
 		// case generics[i] == nil: fmt.Println("<nil>")
 		// case len(generics[i]) == 0: fmt.Println("<empty>")
@@ -94,7 +94,7 @@ func readConfig(filepath string) ([][]byte, map[string]int, error) {
 	lc := lineCount(data)
 	lines := make([][]byte, 0, lc)
 	m := make(map[string]int)
-	for i := 0; i < lc; i++ {
+	for i := range lc {
 		line, rest := nextLine(data)
 		lines = append(lines, line)
 		data = rest
@@ -123,7 +123,7 @@ func processNotes(filepath string, generics [][]byte, gnrc map[string]int, defau
 
 	l := lineCount(data)
 	lines := make([][]byte, 0, l)
-	for i := 0; i < l; i++ {
+	for range l {
 		line, rest := nextLine(data)
 
 		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
