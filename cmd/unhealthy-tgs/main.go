@@ -67,12 +67,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Load Balancers:", len(arns))
 	}
 
-	if printUnhealthy(ctx, client, os.Stdout, arns) > 0 {
-		os.Exit(1)
-		// spew.Dump(arns) //
-	}
-
+	rc := min(1, printUnhealthy(ctx, client, os.Stdout, arns))
 	if isVerbose {
 		fmt.Fprintln(os.Stderr, "Time spent:", strconv.FormatFloat(time.Since(start).Seconds(), 'f', 1, 64), "seconds")
 	}
+	os.Exit(rc)
+	// spew.Dump(arns) //
 }
