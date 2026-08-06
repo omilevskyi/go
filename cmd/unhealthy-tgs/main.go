@@ -53,13 +53,7 @@ func main() {
 
 	var arns []string
 	if args := flag.Args(); isatty.IsTerminal(os.Stdin.Fd()) && len(args) > 0 {
-		if isVerbose {
-			fmt.Fprint(os.Stderr, "Environment(s) [", len(args), "]:")
-			for _, arg := range args {
-				fmt.Fprint(os.Stderr, " ", arg)
-			}
-			fmt.Fprintln(os.Stderr)
-		}
+		_ = isVerbose && printEnvs(os.Stderr, args) == nil
 		arns, err = filterArns(ctx, client, args)
 		ut.IsErr(err, 202, "filterArns()")
 	} else {

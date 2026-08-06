@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -46,4 +48,38 @@ func readArns(r io.Reader) ([]string, error) {
 		return arns, nil
 	}
 	return nil, nil
+}
+
+func printEnvs(w io.Writer, envs []string) error {
+	const envsStr = " environments:"
+
+	n := len(envs)
+	if n == 0 {
+		return nil
+	}
+
+	size := 4 + len(envsStr) + 1 // '\n'
+	for _, env := range envs {
+		size += 1 + len(env) // leading space + env
+	}
+
+	var b strings.Builder
+	b.Grow(size)
+
+	if n == 1 {
+		b.WriteString("1 environment:")
+	} else {
+		b.WriteString(strconv.Itoa(n))
+		b.WriteString(envsStr)
+	}
+
+	for _, env := range envs {
+		b.WriteByte(' ')
+		b.WriteString(env)
+	}
+
+	b.WriteByte('\n')
+
+	_, err := io.WriteString(w, b.String())
+	return err
 }
