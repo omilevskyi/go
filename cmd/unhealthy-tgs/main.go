@@ -5,32 +5,57 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/mattn/go-isatty"
 	ut "github.com/omilevskyi/go/pkg/utils"
 	// "github.com/davecgh/go-spew/spew"
 )
 
-const appName = "unhealthy-tgs"
+const (
+	appName    = "unhealthy-tgs"
+	timeoutSec = 60
+)
 
 var (
 	version = "<dev>" // -ldflags -X main.version=v0.0.0 -X main.commit=[[:xdigit:]]+
 	commit  = "<none>"
 )
 
+type verbosityLevelT uint8
+
+var verbosityLevel verbosityLevelT
+
+const (
+	// vEmerg   verbosityLevelT = iota // 0 - system is unusable
+	// vAlert                          // 1 - action must be taken immediately
+	// vCrit                           // 2 - critical conditions
+	// vErr                            // 3 - error conditions
+	// vWarning                        // 4 - warning conditions
+	// vNotice                         // 5 - normal but significant condition
+	// vInfo                           // 6 - informational
+	// vDebug                          // 7 - debug-level messages
+	vError  verbosityLevelT = iota // error conditions
+	vNotice                        // normal but significant condition
+	vInfo                          // informational
+	vDebug                         // debug-level messages
+)
+
 func main() {
 	start := time.Now()
 
-	var isHelp, isVerbose, isVersion bool
+	var isHelp, isVersion bool
+	var vrbLvl int
 
 	flag.BoolVar(&isHelp, "help", false, "Show usage message")
 	flag.BoolVar(&isVersion, "version", false, "Show version information")
-	flag.BoolVar(&isVerbose, "verbose", false, "Enable verbose output")
+	flag.IntVar(&vrbLvl, "verbose", 0, "Enable verbose output with specified level")
 	flag.Parse()
 
 	if isHelp {
@@ -43,32 +68,43 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutSec*time.Second)
-	defer cancel()
+	verbosityLevel = verbosityLevelT(vrbLvl)
 
-	cfg, err := config.LoadDefaultConfig(ctx)
-	ut.IsErr(err, 201)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM,
+	)
+	defer stop()
 
-	client := elasticloadbalancingv2.NewFromConfig(cfg)
-
-	var arns []string
+	rc := 0
 	if args := flag.Args(); isatty.IsTerminal(os.Stdin.Fd()) && len(args) > 0 {
-		_ = isVerbose && printEnvs(os.Stderr, args) == nil
-		arns, err = filterArns(ctx, client, args)
-		ut.IsErr(err, 202, "filterArns()")
+		items, routines, err := buildProfiles(ctx, args)
+		ut.IsErr(err, 201)
+
+		_ = verbosityLevel > 0 && printEnvs(os.Stderr, items) == nil
+
+		ut.IsErr(groupLoadBalancers(ctx, routines), 202, "groupLoadBalancers()")
+		_ = verbosityLevel > 1 && printProfiles(os.Stdout, routines) == nil
+
+		ut.IsErr(selectUnhealthy(ctx, routines), 203, "selectUnhealthy()")
+		ut.IsErr(printResult(os.Stdout, routines), 204, "printResult()")
 	} else {
-		arns, err = readArns(os.Stdin)
-		ut.IsErr(err, 203, "readArns()")
+		ctx1, cancel := context.WithTimeout(ctx, timeoutSec*time.Second) // ctx1 is used once
+		cfg, err := config.LoadDefaultConfig(ctx1)
+		cancel()
+		ut.IsErr(err, 201)
+
+		arns, err := readArns(os.Stdin)
+		ut.IsErr(err, 202, "readArns()")
+
+		verbf(vNotice, "load balancers: %d", len(arns))
+		if printUnhealthy(ctx, elasticloadbalancingv2.NewFromConfig(cfg), os.Stdout, arns) < 0 {
+			rc = 1
+		}
 	}
 
-	if isVerbose {
-		fmt.Fprintln(os.Stderr, "Load Balancers:", len(arns))
-	}
+	verbf(vNotice, "Time spent: %.1f seconds", time.Since(start).Seconds())
 
-	rc := min(1, printUnhealthy(ctx, client, os.Stdout, arns))
-	if isVerbose {
-		fmt.Fprintln(os.Stderr, "Time spent:", strconv.FormatFloat(time.Since(start).Seconds(), 'f', 1, 64), "seconds")
-	}
 	os.Exit(rc)
-	// spew.Dump(arns) //
+	spew.Dump(rc)
 }
