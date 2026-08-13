@@ -9,10 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/mattn/go-isatty"
 	ut "github.com/omilevskyi/go/pkg/utils"
 	// "github.com/davecgh/go-spew/spew"
@@ -76,35 +72,29 @@ func main() {
 	)
 	defer stop()
 
-	rc := 0
+	var err error
+	var routines []ProfileT
 	if args := flag.Args(); isatty.IsTerminal(os.Stdin.Fd()) && len(args) > 0 {
-		items, routines, err := buildProfiles(ctx, args)
+		var items []itemT
+		items, routines, err = buildProfiles(ctx, args)
 		ut.IsErr(err, 201)
 
 		_ = verbosityLevel > 0 && printEnvs(os.Stderr, items) == nil
 
 		ut.IsErr(groupLoadBalancers(ctx, routines), 202, "groupLoadBalancers()")
 		_ = verbosityLevel > 1 && printProfiles(os.Stdout, routines) == nil
-
-		ut.IsErr(selectUnhealthy(ctx, routines), 203, "selectUnhealthy()")
-		ut.IsErr(printResult(os.Stdout, routines), 204, "printResult()")
 	} else {
-		ctx1, cancel := context.WithTimeout(ctx, timeoutSec*time.Second) // ctx1 is used once
-		cfg, err := config.LoadDefaultConfig(ctx1)
-		cancel()
+		var dummyEnv string
+		dummyEnv, routines, err = buildSingleProfile(ctx, "AWS_PROFILE")
 		ut.IsErr(err, 201)
 
-		arns, err := readArns(os.Stdin)
-		ut.IsErr(err, 202, "readArns()")
-
-		verbf(vNotice, "load balancers: %d", len(arns))
-		if printUnhealthy(ctx, elasticloadbalancingv2.NewFromConfig(cfg), os.Stdout, arns) < 0 {
-			rc = 1
-		}
+		ut.IsErr(readArns(os.Stdin, routines, dummyEnv), 202, "readArns()")
+		verbf(vNotice, "load balancers: %d", len(*(*routines[0].envs)[0].LBs))
 	}
 
-	verbf(vNotice, "Time spent: %.1f seconds", time.Since(start).Seconds())
+	ut.IsErr(selectUnhealthy(ctx, routines), 203, "selectUnhealthy()")
+	ut.IsErr(printResult(os.Stdout, routines), 204, "printResult()")
 
-	os.Exit(rc)
-	spew.Dump(rc)
+	verbf(vNotice, "Time spent: %.1f seconds", time.Since(start).Seconds())
+	// spew.Dump(rc)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -85,4 +86,19 @@ func buildProfiles(prntCtx context.Context, args []string) ([]itemT, []ProfileT,
 		return nil, nil, nil
 	}
 	return items, prfs, nil
+}
+
+func buildSingleProfile(prntCtx context.Context, envVarName string) (string, []ProfileT, error) {
+	profile, dummyEnvName := os.Getenv(envVarName), "stdin"
+	opts := []func(*config.LoadOptions) error{config.WithSharedConfigProfile(profile)}
+	if profile == "" {
+		opts = nil
+	}
+	ctx, cancel := context.WithTimeout(prntCtx, timeoutSec*time.Second)
+	cfg, err := loadConfig(ctx, opts...)
+	cancel()
+	if err != nil {
+		return "", nil, err
+	}
+	return dummyEnvName, []ProfileT{{profile, &cfg, newElbClient(cfg), new([]EnvT{{Name: dummyEnvName}})}}, nil
 }
