@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"strings"
 	"sync"
 	"time"
@@ -83,55 +81,7 @@ func findMatchingArns(ctx context.Context, c *elasticloadbalancingv2.Client,
 	return nil
 }
 
-// printUnhealthy checks all target groups associated with the specified load
-// balancers and reports target groups that contain targets but none in the
-// Healthy state. It returns the total number of such target groups.
-func printUnhealthy(prntCtx context.Context, c *elasticloadbalancingv2.Client, w io.Writer, arns []string) int {
-	count := 0
-	for i := range arns {
-		ctx, cancel := context.WithTimeout(prntCtx, timeoutSec*time.Second)
-		tgs, err := aws.DescribeTargetGroups(ctx, c, arns[i])
-		cancel()
-		if err != nil {
-			ut.IsErr(err, -1)
-			return -1
-		}
-
-		printed := false
-		for _, tg := range tgs {
-			ctx, cancel := context.WithTimeout(prntCtx, timeoutSec*time.Second)
-			ths, err := aws.DescribeTargetHealth(ctx, c, *tg.TargetGroupArn)
-			cancel()
-			if err != nil {
-				ut.IsErr(err, -1)
-				return -1
-			}
-			if len(ths) > 0 {
-				healthy := false
-				for _, th := range ths {
-					if th.TargetHealth.State == types.TargetHealthStateEnumHealthy {
-						healthy = true
-						break
-					}
-				}
-				if !healthy {
-					if !printed {
-						fmt.Fprintln(w, arns[i])
-						printed = true
-					}
-					fmt.Fprintln(w, " ", *tg.TargetGroupArn, "unhealthy")
-					count++
-				}
-			}
-		}
-		if printed {
-			fmt.Fprintln(w)
-		}
-	}
-	return count
-}
-
-func processTargetHealth(ctx context.Context, c *elasticloadbalancingv2.Client, lb *LbT, tgARN string) error {
+func processTargetHealth(ctx context.Context, c *elasticloadbalancingv2.Client, lb LbT, tgARN string) error {
 	ctx, cancel := context.WithTimeout(ctx, timeoutSec*time.Second)
 	ths, err := aws.DescribeTargetHealth(ctx, c, tgARN)
 	cancel()
@@ -151,7 +101,7 @@ func processTargetHealth(ctx context.Context, c *elasticloadbalancingv2.Client, 
 	return nil
 }
 
-func processTargetGroups(ctx context.Context, c *elasticloadbalancingv2.Client, lb *LbT) error {
+func processTargetGroups(ctx context.Context, c *elasticloadbalancingv2.Client, lb LbT) error {
 	ctx1, cancel := context.WithTimeout(ctx, timeoutSec*time.Second) // ctx1 is used once
 	tgs, err := aws.DescribeTargetGroups(ctx1, c, lb.ARN)
 	cancel()
@@ -174,13 +124,11 @@ func processTargetGroups(ctx context.Context, c *elasticloadbalancingv2.Client, 
 func selectUnhealthy(ctx context.Context, profiles []ProfileT) error {
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(maxDescribeTargetGroups)
-	for pi := range profiles {
-		for ei := range *profiles[pi].envs {
-			for li := range *(*profiles[pi].envs)[ei].LBs {
+	for _, p := range profiles {
+		for _, env := range *p.envs {
+			for _, lb := range *env.LBs {
 				g.Go(func() error {
-					return processTargetGroups(
-						ctx, profiles[pi].ELBv2Client, &(*(*profiles[pi].envs)[ei].LBs)[li],
-					)
+					return processTargetGroups(ctx, p.ELBv2Client, lb)
 				})
 			}
 		}

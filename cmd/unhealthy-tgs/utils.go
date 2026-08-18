@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,21 +50,32 @@ func env2path(s string) string {
 
 // readArns reads non-empty, whitespace-trimmed lines from r and returns them
 // as a slice. Empty lines are ignored.
-func readArns(r io.Reader) ([]string, error) {
-	var arns []string
+func readArns(r io.Reader, profiles []ProfileT, envName string) error {
+	var env *EnvT
+	for _, p := range profiles {
+		for i := range *p.envs {
+			if (*p.envs)[i].Name == envName {
+				env = &(*p.envs)[i]
+				break
+			}
+		}
+	}
+	if env == nil {
+		return errors.New("environment name is not found")
+	}
+	if env.LBs == nil {
+		env.LBs = new(make([]LbT, 0))
+	}
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		if line := bytes.TrimSpace(scanner.Bytes()); len(line) > 0 { // line is valid until next scanner.Scan() call
-			arns = append(arns, string(line))
+		if line := bytes.TrimSpace(scanner.Bytes()); len(line) > 0 {
+			*env.LBs = append(*env.LBs, LbT{ARN: string(line)})
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return err
 	}
-	if len(arns) > 0 {
-		return arns, nil
-	}
-	return nil, nil
+	return nil
 }
 
 func printEnvs(w io.Writer, items []itemT) error {
@@ -95,8 +107,10 @@ func printEnvs(w io.Writer, items []itemT) error {
 	for _, item := range items {
 		b.WriteByte(' ')
 		b.WriteString(item.env)
-		b.WriteByte(epSep)
-		b.WriteString(item.profile)
+		if item.profile != "" {
+			b.WriteByte(epSep)
+			b.WriteString(item.profile)
+		}
 	}
 
 	b.WriteByte(lf)
