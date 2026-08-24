@@ -19,6 +19,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }} # pick PR's HEAD instead of merge commit
           fetch-depth: 0
+          persist-credentials: "false"
           show-progress: "false"
 
       - name: Save commit message to file
@@ -35,7 +36,9 @@ jobs:
           args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.commit.outputs.file }}
 
       - name: Remove temporary file
-        run: rm --force -- ${{ steps.commit.outputs.file }}
+        run: rm --force -- "${FILE}"
+        env:
+          FILE: ${{ steps.commit.outputs.file }}
 
       - name: Get next version
         id: version
