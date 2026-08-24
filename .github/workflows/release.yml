@@ -39,7 +39,7 @@ jobs:
         id: changed
         run: |
           APPS=$(
-            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD' |
+            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
           )
@@ -158,7 +158,7 @@ jobs:
           for app in ${APPS}; do
             cosign verify-blob \
               --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
-              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
               --bundle "${app}_${NEXT_VERSION}.sha256.sigstore.json" \
               "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${app}_${NEXT_VERSION}.sha256"
           done
