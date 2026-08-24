@@ -115,6 +115,7 @@ jobs:
           git --no-pager tag --force --annotate "v${NEXT_VERSION}" --message "v${NEXT_VERSION}"
           git --no-pager push --force origin "HEAD:refs/tags/v${NEXT_VERSION}"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT_VERSION: ${{ steps.next.outputs.version }}
 
       - name: Install Cosign

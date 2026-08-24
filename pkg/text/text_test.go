@@ -1,7 +1,5 @@
 package text
 
-// 20260824: trigger build
-
 import (
 	"bytes"
 	"reflect"
