@@ -211,7 +211,7 @@ func grpLBsInProfile(ctx context.Context, p *ProfileT) error {
 				arns = append(arns, ut.Keys(findMatchingArns(ctx, p.ELBv2Client, eiTags, chunk, &cacheTags))...)
 				(*p.envs)[i].LBs = new(make([]LbT, len(arns)))
 				for j := range arns {
-					(*(*p.envs)[i].LBs)[j] = LbT{arns[j], new(make([]string, 0)), new(sync.Mutex)}
+					(*(*p.envs)[i].LBs)[j] = LbT{ARN: arns[j], TgARNs: new(make([]string, 0)), mu: new(sync.Mutex)}
 				}
 				verbf(vNotice, "%s: %s: load balancers matched: %d", p.Name, (*p.envs)[i].Name, len(*(*p.envs)[i].LBs))
 			}
@@ -219,7 +219,7 @@ func grpLBsInProfile(ctx context.Context, p *ProfileT) error {
 	} else {
 		p.envs = &[]EnvT{{"", new(make([]LbT, n))}}
 		for j := range n {
-			(*(*p.envs)[0].LBs)[j] = LbT{*lbs[j].LoadBalancerArn, new(make([]string, 0)), new(sync.Mutex)}
+			(*(*p.envs)[0].LBs)[j] = LbT{ARN: *lbs[j].LoadBalancerArn, TgARNs: new(make([]string, 0)), mu: new(sync.Mutex)}
 		}
 	}
 	verbf(vInfo, "%s: finish", p.Name)

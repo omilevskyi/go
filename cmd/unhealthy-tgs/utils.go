@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
@@ -75,7 +76,7 @@ func readArns(r io.Reader, profiles []ProfileT, envName string) error {
 	}
 
 	for line := range t.Lines(data) {
-		*env.LBs = append(*env.LBs, LbT{ARN: string(line)})
+		*env.LBs = append(*env.LBs, LbT{ARN: string(line), TgARNs: new(make([]string, 0)), mu: new(sync.Mutex)})
 	}
 
 	return nil
