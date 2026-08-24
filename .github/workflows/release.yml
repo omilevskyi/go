@@ -113,7 +113,7 @@ jobs:
           git --no-pager config user.name 'Publish Release'
           git --no-pager config user.email 'publish-release@github.com'
           git --no-pager tag --force --annotate "v${NEXT_VERSION}" --message "v${NEXT_VERSION}"
-          git --no-pager push --force origin "HEAD:refs/tags/v${NEXT_VERSION}"
+          git --no-pager push --force "https://x-access-token:${GITHUB_TOKEN}@${GITHUB_SERVER_URL##*/}/${GITHUB_REPOSITORY}.git" "HEAD:refs/tags/v${NEXT_VERSION}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT_VERSION: ${{ steps.next.outputs.version }}
