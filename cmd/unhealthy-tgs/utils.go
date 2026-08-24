@@ -70,14 +70,11 @@ func readArns(r io.Reader, profiles []ProfileT, envName string) error {
 		txt.WithSkipWhiteSpace(true), txt.WithTrimLeadSpace(true), txt.WithTrimTrailSpace(true),
 	)
 
-	n := t.LineCount(data)
 	if env.LBs == nil {
-		env.LBs = new(make([]LbT, 0, n))
+		env.LBs = new(make([]LbT, 0, t.LineCount(data)))
 	}
 
-	var line []byte
-	for range n {
-		line, data = t.NextLine(data)
+	for line := range t.Lines(data) {
 		*env.LBs = append(*env.LBs, LbT{ARN: string(line)})
 	}
 
