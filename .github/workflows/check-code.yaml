@@ -15,18 +15,21 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: "false"
           show-progress: "false"
 
       - name: Get modified .go files compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           set -o pipefail
-          if git --no-pager diff --no-color --name-only 'origin/${{ github.event.repository.default_branch }}...HEAD' |
+          if git --no-pager diff --no-color --name-only "origin/${DEFAULT_BRANCH}...HEAD" |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
             echo 'altered=false' >>"${GITHUB_OUTPUT}"
           fi
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
       - name: golangci-lint
         if: steps.go.outputs.altered == 'true'

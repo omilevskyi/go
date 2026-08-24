@@ -493,3 +493,23 @@ func TestNextLine_SkipMany(t *testing.T) {
 		t.Fatalf("rest must be nil")
 	}
 }
+
+func TestLines(t *testing.T) {
+	txt := New()
+
+	var got [][]byte
+
+	for line := range txt.Lines([]byte("abc\ndef\nghi")) {
+		got = append(got, line)
+	}
+
+	want := [][]byte{
+		[]byte("abc"),
+		[]byte("def"),
+		[]byte("ghi"),
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got=%q want=%q", got, want)
+	}
+}

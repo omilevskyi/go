@@ -20,6 +20,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }} # pick PR's HEAD instead of merge commit
           fetch-depth: 0
+          persist-credentials: "false"
           show-progress: "false"
 
       - name: Get last version
@@ -38,23 +39,28 @@ jobs:
         id: changed
         run: |
           APPS=$(
-            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' |
+            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD' |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
           )
           echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
+        env:
+          LAST_VERSION: ${{ steps.last.outputs.version }}
 
       - name: Get modified .go files compared to ${{ steps.last.outputs.version }}
         id: go
         run: |
           set -o pipefail
-          if [ -n '${{ steps.changed.outputs.apps }}' ] ||
-            git --no-pager diff --no-color --name-only '${{ steps.last.outputs.version }}...HEAD' |
+          if [ -n "${APPS}" ] ||
+            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
             echo 'altered=false' >>"${GITHUB_OUTPUT}"
           fi
+        env:
+          APPS: ${{ steps.changed.outputs.apps }}
+          LAST_VERSION: ${{ steps.last.outputs.version }}
 
       - name: Save commit message to file
         id: commit
@@ -73,7 +79,9 @@ jobs:
 
       - name: Remove temporary file
         if: steps.go.outputs.altered == 'true'
-        run: rm --force -- ${{ steps.commit.outputs.file }}
+        run: rm --force -- "${FILE}"
+        env:
+          FILE: ${{ steps.commit.outputs.file }}
 
       - name: Get next version
         id: next
@@ -89,7 +97,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
           check-latest: true
-          cache: true
+          cache: false
 
       - name: Disable Go telemetry
         if: steps.go.outputs.altered == 'true'
@@ -104,8 +112,10 @@ jobs:
         run: |
           git --no-pager config user.name 'Publish Release'
           git --no-pager config user.email 'publish-release@github.com'
-          git --no-pager tag --force --annotate 'v${{ steps.next.outputs.version }}' --message 'v${{ steps.next.outputs.version }}'
-          git --no-pager push --force origin 'HEAD:refs/tags/v${{ steps.next.outputs.version }}'
+          git --no-pager tag --force --annotate "v${NEXT_VERSION}" --message "v${NEXT_VERSION}"
+          git --no-pager push --force origin "HEAD:refs/tags/v${NEXT_VERSION}"
+        env:
+          NEXT_VERSION: ${{ steps.next.outputs.version }}
 
       - name: Install Cosign
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
@@ -123,30 +133,35 @@ jobs:
       - name: Run GoReleaser
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
-          for app in ${{ steps.changed.outputs.apps }}; do
+          for app in ${APPS}; do
             FILE=".goreleaser/${app}.yml"
             test -f "${FILE}" && goreleaser release --config "${FILE}" --clean
           done
         env:
+          APPS: ${{ steps.changed.outputs.apps }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
-          for app in ${{ steps.changed.outputs.apps }}; do
-            gh release download 'v${{ steps.next.outputs.version }}' \
-              --pattern "${app}_${{ steps.next.outputs.version }}.sha256.sigstore.json"
+          for app in ${APPS}; do
+            gh release download "v${NEXT_VERSION}" --pattern "${app}_${NEXT_VERSION}.sha256.sigstore.json"
           done
         env:
+          APPS: ${{ steps.changed.outputs.apps }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_VERSION: ${{ steps.next.outputs.version }}
 
       - name: Verify v${{ steps.next.outputs.version }}
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
-          for app in ${{ steps.changed.outputs.apps }}; do
+          for app in ${APPS}; do
             cosign verify-blob \
               --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-              --bundle "${app}_${{ steps.next.outputs.version }}.sha256.sigstore.json" \
-              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${{ steps.next.outputs.version }}/${app}_${{ steps.next.outputs.version }}.sha256"
+              --bundle "${app}_${NEXT_VERSION}.sha256.sigstore.json" \
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${app}_${NEXT_VERSION}.sha256"
           done
+        env:
+          APPS: ${{ steps.changed.outputs.apps }}
+          NEXT_VERSION: ${{ steps.next.outputs.version }}

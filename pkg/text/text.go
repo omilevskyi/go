@@ -1,6 +1,9 @@
 package text
 
-import "bytes"
+import (
+	"bytes"
+	"iter"
+)
 
 // White space constants
 const (
@@ -114,7 +117,7 @@ func (t *Text) LineCount(b []byte) (count int) {
 			count += t.lineWeight(b[start:])
 		}
 	}
-	return count
+	return
 }
 
 // NextLine returns the first line and remaining data, trimming LF and preceding CR characters.
@@ -147,4 +150,21 @@ func (t *Text) NextLine(b []byte) (line, rest []byte) {
 		b = rest
 	}
 	return nil, nil
+}
+
+// Lines returns a sequence of lines extracted from b.
+//
+// Each line is produced by successive calls to NextLine. Lines excluded by
+// the current SkipEmptyLine and SkipWhiteSpace settings are not yielded.
+// Iteration terminates when the input is exhausted or when yield returns false.
+func (t *Text) Lines(b []byte) iter.Seq[[]byte] {
+	return func(yield func([]byte) bool) {
+		for {
+			line, rest := t.NextLine(b)
+			if line == nil && rest == nil || !yield(line) {
+				return
+			}
+			b = rest
+		}
+	}
 }
