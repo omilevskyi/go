@@ -9,7 +9,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-openapi/testify/v2 v2.6.1
 	github.com/mattn/go-isatty v0.0.24
-	github.com/omilevskyi/go v0.1.15
+	github.com/omilevskyi/go v0.1.17
 	golang.org/x/sync v0.22.0
 )
 
