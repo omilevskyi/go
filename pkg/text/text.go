@@ -90,24 +90,28 @@ func (t *Text) IsSpaceLine(line []byte) bool {
 	return true
 }
 
+// lineWeight returns the line's weight for counting purposes.
+// A line contributes 1 if it is countable, otherwise 0.
+func (t *Text) lineWeight(b []byte) int {
+	if t.SkipWhiteSpace && t.IsSpaceLine(b) || t.SkipEmptyLine && len(b) == 0 {
+		return 0
+	}
+	return 1
+}
+
 // LineCount returns the number of lines in data without allocating,
 // allowing accurate preallocation of a slice for subsequent line parsing.
 func (t *Text) LineCount(b []byte) (count int) {
 	if n := len(b); n > 0 {
-		var line []byte
-		start, length := 0, 0
-		for i := 0; i <= n; i++ {
-			if i == n || b[i] == LF {
-				line, length = b[start:i], i-start
-				if (!t.SkipWhiteSpace || (length > 0 && !t.IsSpaceLine(line))) &&
-					(!t.SkipEmptyLine || length > 0) {
-					count++
-				}
+		start := 0
+		for i, c := range b {
+			if c == LF {
+				count += t.lineWeight(b[start:i])
 				start = i + 1
 			}
 		}
-		if count > 0 && b[n-1] == LF {
-			return count - 1
+		if start < n {
+			count += t.lineWeight(b[start:])
 		}
 	}
 	return count
@@ -137,44 +141,10 @@ func (t *Text) NextLine(b []byte) (line, rest []byte) {
 				line = line[1:]
 			}
 		}
-		if (!t.SkipWhiteSpace || !t.IsSpaceLine(line)) &&
-			(!t.SkipEmptyLine || len(line) > 0) { // !(t.SkipEmptyLine && len(line) == 0 || t.SkipWhiteSpace && t.IsSpaceLine(line))
+		if t.lineWeight(line) > 0 {
 			return line, rest
 		}
 		b = rest
-	}
-	return nil, nil
-}
-
-// NextLineNoSlice -
-func (t *Text) NextLineNoSlice(b []byte) ([]byte, []byte) {
-	var start, end, eol int
-	for len(b) > 0 {
-		start, end, eol = 0, len(b), bytes.IndexByte(b, LF)
-		if eol >= 0 {
-			end = eol
-		}
-		if t.TrimTrailSpace {
-			for start < end && t.IsSpace(b[end-1]) {
-				end--
-			}
-		}
-		if t.TrimLeadSpace {
-			for start < end && t.IsSpace(b[start]) {
-				start++
-			}
-		}
-		if (!t.SkipWhiteSpace || !t.IsSpaceLine(b[start:end])) &&
-			(!t.SkipEmptyLine || start < end) {
-			if eol >= 0 && eol+1 < len(b) {
-				return b[start:end], b[eol+1:]
-			}
-			return b[start:end], nil
-		}
-		if eol < 0 {
-			break
-		}
-		b = b[eol+1:]
 	}
 	return nil, nil
 }

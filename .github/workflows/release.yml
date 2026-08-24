@@ -32,6 +32,8 @@ jobs:
           )
           echo "version=${LAST_VERSION}" >>"${GITHUB_OUTPUT}"
 
+      # Find applications in cmd/ whose Go sources or go.mod files have changed
+      # since the last released version and expose them as the "apps" output.
       - name: Get changed applications
         id: changed
         run: |
