@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+
+	txt "github.com/omilevskyi/go/pkg/text"
 	ut "github.com/omilevskyi/go/pkg/utils"
 )
 
@@ -23,9 +23,6 @@ const (
 	e2pFinDgt = '9'
 
 	epSep = ':'
-	sp    = ' '
-	tab   = '\t'
-	lf    = '\n'
 )
 
 var (
@@ -63,18 +60,27 @@ func readArns(r io.Reader, profiles []ProfileT, envName string) error {
 	if env == nil {
 		return errors.New("environment name is not found")
 	}
-	if env.LBs == nil {
-		env.LBs = new(make([]LbT, 0))
-	}
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		if line := bytes.TrimSpace(scanner.Bytes()); len(line) > 0 {
-			*env.LBs = append(*env.LBs, LbT{ARN: string(line)})
-		}
-	}
-	if err := scanner.Err(); err != nil {
+
+	data, err := io.ReadAll(r)
+	if err != nil {
 		return err
 	}
+
+	t := txt.New(
+		txt.WithSkipWhiteSpace(true), txt.WithTrimLeadSpace(true), txt.WithTrimTrailSpace(true),
+	)
+
+	n := t.LineCount(data)
+	if env.LBs == nil {
+		env.LBs = new(make([]LbT, 0, n))
+	}
+
+	var line []byte
+	for range n {
+		line, data = t.NextLine(data)
+		*env.LBs = append(*env.LBs, LbT{ARN: string(line)})
+	}
+
 	return nil
 }
 
@@ -113,7 +119,7 @@ func printEnvs(w io.Writer, items []itemT) error {
 		}
 	}
 
-	b.WriteByte(lf)
+	b.WriteByte(txt.LF)
 
 	_, err := io.WriteString(w, b.String())
 	return err
@@ -123,24 +129,9 @@ func printEnvs(w io.Writer, items []itemT) error {
 // two components. If no profile is specified, the second return value is empty.
 // Any additional colon-separated components are ignored.
 func envProfile(s string) (string, string) {
-	// 	parts := strings.SplitN(s, string(envPrfSep), 3)
-	// 	if len(parts) == 1 {
-	// 		return strings.TrimSpace(parts[0]), ""
-	// 	}
-	// 	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-	// i := strings.IndexRune(s, envProfSep)
-	// if i < 0 {
-	// 	return strings.TrimSpace(s), ""
-	// }
-	// j := strings.IndexRune(s[i+1:], envProfSep)
-	// if j < 0 {
-	// 	j = len(s) - i - 1
-	// }
-	// return strings.TrimSpace(s[:i]), strings.TrimSpace(s[i+1 : i+1+j])
-
 	i, n := 0, len(s)
-	e0 := 0                                       // environment start
-	for e0 < n && (s[e0] == sp || s[e0] == tab) { // trim leading spaces from environment
+	e0 := 0                                              // environment start
+	for e0 < n && (s[e0] == txt.SP || s[e0] == txt.HT) { // trim leading spaces from environment
 		e0++
 	}
 	e1, p0, p1 := e0, n, n // environment finish, profile start, profile finish
@@ -154,11 +145,11 @@ func envProfile(s string) (string, string) {
 	if e1 == e0 && e1 < n && s[e1] != epSep { // no profile
 		e1 = n
 	}
-	for e1 > e0 && (s[e1-1] == sp || s[e1-1] == tab) { // trim trailing spaces from environment
+	for e1 > e0 && (s[e1-1] == txt.SP || s[e1-1] == txt.HT) { // trim trailing spaces from environment
 		e1--
 	}
 	if p0 < n {
-		for p0 < n && (s[p0] == sp || s[p0] == tab) { // trim leading spaces from profile
+		for p0 < n && (s[p0] == txt.SP || s[p0] == txt.HT) { // trim leading spaces from profile
 			p0++
 		}
 		for i = p0; i < n; i++ {
@@ -167,7 +158,7 @@ func envProfile(s string) (string, string) {
 				break
 			}
 		}
-		for p1 > p0 && (s[p1-1] == sp || s[p1-1] == tab) { // trim trailing spaces from profile
+		for p1 > p0 && (s[p1-1] == txt.SP || s[p1-1] == txt.HT) { // trim trailing spaces from profile
 			p1--
 		}
 	}
@@ -187,9 +178,9 @@ func printProfiles(w io.Writer, profiles []ProfileT) error {
 			b.WriteString(strconv.Itoa(len(*p.envs)))
 		}
 		b.WriteString("):")
-		b.WriteByte(lf)
+		b.WriteByte(txt.LF)
 		for _, e := range *p.envs {
-			b.WriteByte(sp)
+			b.WriteByte(txt.SP)
 			b.WriteString(e.Name)
 			b.WriteByte('(')
 			if e.LBs == nil {
@@ -199,23 +190,19 @@ func printProfiles(w io.Writer, profiles []ProfileT) error {
 			}
 			b.WriteByte(')')
 		}
-		b.WriteByte(lf)
+		b.WriteByte(txt.LF)
 	}
 	_, err := io.WriteString(w, b.String())
 	return err
 }
 
-func verbf(lvl verbosityLevelT, format string, a ...any) error {
+func verbf(lvl verbosityLevelT, format string, a ...any) {
 	if lvl <= verbosityLevel && len(format) > 0 {
-		if format[len(format)-1] != lf {
-			format += string(lf)
+		if format[len(format)-1] != txt.LF {
+			format += string(txt.LF)
 		}
-		_, err := fmt.Fprintf(os.Stderr, format, a...)
-		if err != nil {
-			return err
-		}
+		fmt.Fprintf(os.Stderr, format, a...)
 	}
-	return nil
 }
 
 func printResult(w io.Writer, profiles []ProfileT) error {
@@ -247,4 +234,33 @@ func printResult(w io.Writer, profiles []ProfileT) error {
 		}
 	}
 	return nil
+}
+
+// lbCount returns the number of load balancers associated with the idxs[1]
+// environment of the idxs[0] profile.
+//
+// Returns 0 if any required level of the profile/environment/load balancer
+// hierarchy is missing or invalid.
+//
+// The implementation intentionally favors readability over a more compact form.
+func lbCount(profiles []ProfileT, idxs ...int) int {
+	i := 0
+	if len(idxs) > 0 {
+		i = idxs[0]
+	}
+	if len(profiles) == 0 || i >= len(profiles) || profiles[i].envs == nil {
+		return 0
+	}
+
+	envs := *profiles[i].envs
+	if len(idxs) > 1 {
+		i = idxs[1]
+	} else {
+		i = 0
+	}
+	if len(envs) == 0 || i >= len(envs) || envs[i].LBs == nil {
+		return 0
+	}
+
+	return len(*envs[i].LBs)
 }

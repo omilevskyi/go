@@ -81,19 +81,24 @@ func main() {
 
 		_ = verbosityLevel > 0 && printEnvs(os.Stderr, items) == nil
 
-		ut.IsErr(groupLoadBalancers(ctx, routines), 202, "groupLoadBalancers()")
-		_ = verbosityLevel > 1 && printProfiles(os.Stdout, routines) == nil
+		err = groupLoadBalancers(ctx, routines)
+		ut.IsErr(err, 202, "groupLoadBalancers()")
+		_ = verbosityLevel > 1 && printProfiles(os.Stderr, routines) == nil
 	} else {
 		var dummyEnv string
 		dummyEnv, routines, err = buildSingleProfile(ctx, "AWS_PROFILE")
-		ut.IsErr(err, 201)
+		ut.IsErr(err, 201, "buildSingleProfile()")
 
-		ut.IsErr(readArns(os.Stdin, routines, dummyEnv), 202, "readArns()")
-		verbf(vNotice, "load balancers: %d", len(*(*routines[0].envs)[0].LBs))
+		err = readArns(os.Stdin, routines, dummyEnv)
+		ut.IsErr(err, 202, "readArns()")
+		verbf(vNotice, "load balancers: %d", lbCount(routines))
 	}
 
-	ut.IsErr(selectUnhealthy(ctx, routines), 203, "selectUnhealthy()")
-	ut.IsErr(printResult(os.Stdout, routines), 204, "printResult()")
+	err = selectUnhealthy(ctx, routines)
+	ut.IsErr(err, 203, "selectUnhealthy()")
+
+	err = printResult(os.Stdout, routines)
+	ut.IsErr(err, 204, "printResult()")
 
 	verbf(vNotice, "Time spent: %.1f seconds", time.Since(start).Seconds())
 	// spew.Dump(rc)
