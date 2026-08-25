@@ -40,6 +40,7 @@ jobs:
         run: |
           APPS=$(
             git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
+            grep --invert-match --regexp='_test\.go$' |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
           )
@@ -47,12 +48,13 @@ jobs:
         env:
           LAST_VERSION: ${{ steps.last.outputs.version }}
 
-      - name: Get modified .go files compared to ${{ steps.last.outputs.version }}
+      - name: Get altered flag compared to ${{ steps.last.outputs.version }}
         id: go
         run: |
           set -o pipefail
           if [ -n "${APPS}" ] ||
             git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
+            grep --invert-match --regexp='_test\.go$' |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
@@ -107,22 +109,29 @@ jobs:
         if: steps.go.outputs.altered == 'true'
         run: go test -v ./...
 
-      - name: Push next version
+      - name: Push next version ${{ steps.next.outputs.version }}
         if: steps.next.outputs.version != ''
         run: |
           git --no-pager config user.name 'Publish Release'
           git --no-pager config user.email 'publish-release@github.com'
           git --no-pager tag --force --annotate "v${NEXT_VERSION}" --message "v${NEXT_VERSION}"
-          git --no-pager push --force "https://x-access-token:${GITHUB_TOKEN}@${GITHUB_SERVER_URL##*/}/${GITHUB_REPOSITORY}.git" "HEAD:refs/tags/v${NEXT_VERSION}"
+          git --no-pager push --force "https://x-access-token:${GITHUB_TOKEN}@${GITHUB_SERVER_URL##*/}/${GITHUB_REPOSITORY}.git" "v${NEXT_VERSION}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT_VERSION: ${{ steps.next.outputs.version }}
 
-      - name: Install Cosign
+      - name: Get Cosign release version
+        id: cosign
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
+        run: |
+          COSIGN_VERSION=$(head --lines=1 "${GITHUB_WORKSPACE}/.cosign-version")
+          echo "version=${COSIGN_VERSION}" >>"${GITHUB_OUTPUT}"
+
+      - name: Install Cosign ${{ steps.cosign.outputs.version }}
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v3.1.2
+          cosign-release: ${{ steps.cosign.outputs.version }}
 
       - name: Install GoReleaser
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
@@ -136,13 +145,14 @@ jobs:
         run: |
           for app in ${APPS}; do
             FILE=".goreleaser/${app}.yml"
-            test -f "${FILE}" && goreleaser release --config "${FILE}" --clean
+            test -f "${FILE}" || continue
+            goreleaser release --config "${FILE}" --clean
           done
         env:
           APPS: ${{ steps.changed.outputs.apps }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download bundle(s)
+      - name: Download v${{ steps.next.outputs.version }} bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           for app in ${APPS}; do
@@ -159,7 +169,7 @@ jobs:
           for app in ${APPS}; do
             cosign verify-blob \
               --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
-              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
               --bundle "${app}_${NEXT_VERSION}.sha256.sigstore.json" \
               "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${app}_${NEXT_VERSION}.sha256"
           done

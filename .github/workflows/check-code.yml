@@ -23,6 +23,7 @@ jobs:
         run: |
           set -o pipefail
           if git --no-pager diff --no-color --name-only "origin/${DEFAULT_BRANCH}...HEAD" |
+            grep --invert-match --regexp='_test\.go$' |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo 'altered=true' >>"${GITHUB_OUTPUT}"
           else
@@ -35,7 +36,7 @@ jobs:
         if: steps.go.outputs.altered == 'true'
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.11
+          version-file: .golangci-lint-version
 
       - name: Setup Go
         if: steps.go.outputs.altered == 'true'
@@ -43,7 +44,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-          cache: true
+          cache: false
 
       - name: Disable Go telemetry
         if: steps.go.outputs.altered == 'true'
