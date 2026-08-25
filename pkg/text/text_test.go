@@ -515,3 +515,90 @@ func TestLines(t *testing.T) {
 		t.Fatalf("got=%q want=%q", got, want)
 	}
 }
+
+func TestNextLineIterative(t *testing.T) {
+	txt := New(WithTrimTrailSpace(true))
+
+	data := []byte("a\r\n\nb\nc\r\r\r\n")
+	var lines [][]byte
+
+	for len(data) > 0 {
+		var line []byte
+		line, data = txt.NextLine(data)
+		lines = append(lines, line)
+	}
+
+	want := [][]byte{
+		[]byte("a"),
+		[]byte(""),
+		[]byte("b"),
+		[]byte("c"),
+	}
+
+	if len(lines) != len(want) {
+		t.Fatalf("got %d lines, want %d", len(lines), len(want))
+	}
+
+	for i := range want {
+		if !bytes.Equal(lines[i], want[i]) {
+			t.Fatalf("line %d: got=%q want=%q", i, lines[i], want[i])
+		}
+	}
+}
+
+func TestNextLineConsumesExactlyOneLine(t *testing.T) {
+	txt := New(WithTrimTrailSpace(true))
+
+	input := []byte("abc\r\nxyz")
+
+	line, rest := txt.NextLine(input)
+
+	if !bytes.Equal(line, []byte("abc")) {
+		t.Fatalf("unexpected line: %q", line)
+	}
+
+	if !bytes.Equal(rest, []byte("xyz")) {
+		t.Fatalf("unexpected rest: %q", rest)
+	}
+}
+
+func TestLineCountMatchesNextLine(t *testing.T) {
+	txt := New()
+
+	tests := [][]byte{
+		nil,
+		{},
+		[]byte("abc"),
+		[]byte("abc\n"),
+		[]byte("\n"),
+		[]byte("\n\n"),
+		[]byte("a\nb\nc"),
+		[]byte("a\nb\n*\n"),
+		[]byte("a\r\nb\r\nc"),
+		[]byte("a\r\n\r\nc"),
+		[]byte("*\n\r\n\r\n"),
+		[]byte("a\n*r*nb\n\nc\r\n"),
+	}
+
+	for _, input := range tests {
+		gotCount := txt.LineCount(input)
+
+		var actual int
+		data := input
+
+		for {
+			line, rest := txt.NextLine(data)
+
+			if line == nil && rest == nil {
+				break
+			}
+
+			actual++
+			data = rest
+		}
+
+		if gotCount != actual {
+			t.Fatalf("input=%q Line*ount=%d NextLine=%d", input, gotCount, actual)
+		}
+	}
+}
