@@ -152,19 +152,19 @@ func (t *Text) NextLine(b []byte) (line, rest []byte) {
 	return nil, nil
 }
 
-// Lines returns a sequence of lines extracted from b.
+// Lines returns a sequence of lines extracted from "data".
 //
 // Each line is produced by successive calls to NextLine. Lines excluded by
 // the current SkipEmptyLine and SkipWhiteSpace settings are not yielded.
 // Iteration terminates when the input is exhausted or when yield returns false.
-func (t *Text) Lines(b []byte) iter.Seq[[]byte] {
+func (t *Text) Lines(data []byte) iter.Seq[[]byte] {
 	return func(yield func([]byte) bool) {
+		var line []byte
 		for {
-			line, rest := t.NextLine(b)
-			if line == nil && rest == nil || !yield(line) {
+			line, data = t.NextLine(data)
+			if line == nil && data == nil || !yield(line) {
 				return
 			}
-			b = rest
 		}
 	}
 }
