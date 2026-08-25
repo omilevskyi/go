@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	txt "github.com/omilevskyi/go/pkg/text"
 	ut "github.com/omilevskyi/go/pkg/utils"
 )
 
@@ -65,10 +66,10 @@ func writeLines(filepath string, lines [][]byte) error {
 		// default:	fmt.Println(string(lines[i]))
 		// }
 		if lines[i] == nil || len(lines[i]) > 0 {
-			if _, err := w.Write(lines[i]); err != nil {
+			if _, err = w.Write(lines[i]); err != nil {
 				return err
 			}
-			if err := w.WriteByte(lf); err != nil {
+			if err = w.WriteByte(txt.LF); err != nil {
 				return err
 			}
 		}
@@ -91,17 +92,13 @@ func readConfig(filepath string) ([][]byte, map[string]int, error) {
 		return nil, nil, ut.Fringerr(err)
 	}
 
-	lc := lineCount(data)
-	lines := make([][]byte, 0, lc)
-	m := make(map[string]int)
-	for i := range lc {
-		line, rest := nextLine(data)
-		lines = append(lines, line)
-		data = rest
-
+	t := txt.New()
+	lines, m, i := make([][]byte, 0, t.LineCount(data)), make(map[string]int), 0
+	for line := range t.Lines(data) {
 		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
 			m[concat(kwrd, []byte{sep}, val)] = i
 		}
+		i++
 	}
 	return lines, m, nil
 }
@@ -121,11 +118,9 @@ func processNotes(filepath string, generics [][]byte, gnrc map[string]int, defau
 		return nil, ut.Fringerr(err)
 	}
 
-	l := lineCount(data)
-	lines := make([][]byte, 0, l)
-	for range l {
-		line, rest := nextLine(data)
-
+	t := txt.New()
+	lines := make([][]byte, 0, t.LineCount(data))
+	for line := range t.Lines(data) {
 		if kwrd, val := keywordValue(line); len(kwrd) > 0 && len(val) > 0 {
 			if n, ok := gnrc[concat(kwrd, []byte{sep}, val)]; ok {
 				line = generics[n]
@@ -138,7 +133,6 @@ func processNotes(filepath string, generics [][]byte, gnrc map[string]int, defau
 		}
 
 		lines = append(lines, line)
-		data = rest
 	}
 	return lines, nil
 }
