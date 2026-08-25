@@ -68,7 +68,7 @@ jobs:
         id: commit
         if: steps.go.outputs.altered == 'true'
         run: |
-          FILE=$(mktemp --tmpdir=${{ runner.temp }})
+          FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
           git --no-pager log -1 --no-color --pretty=%B >"${FILE}"
           echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
 
@@ -152,25 +152,25 @@ jobs:
           APPS: ${{ steps.changed.outputs.apps }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download v${{ steps.next.outputs.version }} bundle(s)
+      - name: Download bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           for app in ${APPS}; do
-            gh release download "v${NEXT_VERSION}" --pattern "${app}_${NEXT_VERSION}.sha256.sigstore.json"
+            gh release download "v${NEXT_VERSION}" --dir "${RUNNER_TEMP}" --pattern "${app}_${NEXT_VERSION}.sha256.sigstore.json"
           done
         env:
           APPS: ${{ steps.changed.outputs.apps }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT_VERSION: ${{ steps.next.outputs.version }}
 
-      - name: Verify v${{ steps.next.outputs.version }}
+      - name: Verify bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           for app in ${APPS}; do
             cosign verify-blob \
               --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --bundle "${app}_${NEXT_VERSION}.sha256.sigstore.json" \
+              --bundle "${RUNNER_TEMP}/${app}_${NEXT_VERSION}.sha256.sigstore.json" \
               "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${app}_${NEXT_VERSION}.sha256"
           done
         env:

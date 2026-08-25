@@ -52,7 +52,7 @@ func main() {
 func writeLines(filepath string, lines [][]byte) error {
 	f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
-		return ut.Fringerr(err)
+		return err
 	}
 	defer f.Close()
 
@@ -83,13 +83,13 @@ func writeLines(filepath string, lines [][]byte) error {
 func readConfig(filepath string) ([][]byte, map[string]int, error) {
 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
 	if err != nil {
-		return nil, nil, ut.Fringerr(err)
+		return nil, nil, err
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return nil, nil, ut.Fringerr(err)
+		return nil, nil, err
 	}
 
 	t := txt.New()
@@ -109,13 +109,13 @@ func readConfig(filepath string) ([][]byte, map[string]int, error) {
 func processNotes(filepath string, generics [][]byte, gnrc map[string]int, defaults [][]byte, dflt map[string]int) ([][]byte, error) {
 	f, err := os.OpenFile(filepath, os.O_RDONLY, 0)
 	if err != nil {
-		return nil, ut.Fringerr(err)
+		return nil, err
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return nil, ut.Fringerr(err)
+		return nil, err
 	}
 
 	t := txt.New()
