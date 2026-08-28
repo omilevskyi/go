@@ -41,7 +41,8 @@ jobs:
           FILE: ${{ steps.commit.outputs.file }}
 
       - name: Get next version
-        id: version
+        id: next
         run: |
-          NEXT=$(cog bump --auto --dry-run | sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p')
-          echo "next=${NEXT}" >>"${GITHUB_OUTPUT}"
+          NEXT_VERSION=$(cog bump --auto --dry-run | \
+            sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
+          echo "version=${NEXT_VERSION}" >>"${GITHUB_OUTPUT}"
