@@ -47,11 +47,11 @@ func main() {
 	start := time.Now()
 
 	var isHelp, isVersion bool
-	var vrbLvl int
+	var vrbLvl uint
 
 	flag.BoolVar(&isHelp, "help", false, "Show usage message")
 	flag.BoolVar(&isVersion, "version", false, "Show version information")
-	flag.IntVar(&vrbLvl, "verbose", 0, "Enable verbose output with specified level")
+	flag.UintVar(&vrbLvl, "verbose", 0, "Enable verbose output with specified level")
 	flag.Parse()
 
 	if isHelp {

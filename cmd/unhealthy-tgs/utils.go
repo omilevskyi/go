@@ -195,11 +195,8 @@ func printProfiles(w io.Writer, profiles []ProfileT) error {
 }
 
 func verbf(lvl verbosityLevelT, format string, a ...any) {
-	if lvl <= verbosityLevel && len(format) > 0 {
-		if format[len(format)-1] != txt.LF {
-			format += string(txt.LF)
-		}
-		fmt.Fprintf(os.Stderr, format, a...)
+	if lvl <= verbosityLevel {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf(format, a...))
 	}
 }
 

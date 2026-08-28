@@ -89,8 +89,9 @@ jobs:
         id: next
         if: steps.go.outputs.altered == 'true'
         run: |
-          NEXT=$(cog bump --auto --dry-run | sed --silent --regexp-extended 's/^v([[:digit:].]+)$/\1/p')
-          echo "version=${NEXT}" >>"${GITHUB_OUTPUT}"
+          NEXT_VERSION=$(cog bump --auto --dry-run | \
+            sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
+          echo "version=${NEXT_VERSION}" >>"${GITHUB_OUTPUT}"
 
       - name: Setup Go
         if: steps.go.outputs.altered == 'true'
