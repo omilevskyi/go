@@ -37,6 +37,12 @@ repos:
       - id: check-github-actions
       - id: check-github-workflows
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.0
+    hooks:
+      - id: zizmor
+        args: [--no-progress]
+
   - repo: https://github.com/homebysix/pre-commit-macadmin
     rev: v1.25.1
     hooks:
