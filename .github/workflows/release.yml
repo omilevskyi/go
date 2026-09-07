@@ -40,7 +40,7 @@ jobs:
         run: |
           set -o noglob
           set -- $(
-            git --no-pager diff --no-color --name-only "v0.1.27...HEAD" |
+            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
             grep --invert-match --regexp='_test\.go$' |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
