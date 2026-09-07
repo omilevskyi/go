@@ -1,0 +1,17 @@
+  - id: generic2notes
+    main: ./cmd/generic2notes
+    binary: generic2notes
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    tags:
+      - static_build
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+    goos:
+      - freebsd
+    goarch:
+      - amd64

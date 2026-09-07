@@ -25,9 +25,9 @@ jobs:
           if git --no-pager diff --no-color --name-only "origin/${DEFAULT_BRANCH}...HEAD" |
             grep --invert-match --regexp='_test\.go$' |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
-            echo 'altered=true' >>"${GITHUB_OUTPUT}"
+            echo altered=true | tee --append "${GITHUB_OUTPUT}"
           else
-            echo 'altered=false' >>"${GITHUB_OUTPUT}"
+            echo altered=false | tee --append "${GITHUB_OUTPUT}"
           fi
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

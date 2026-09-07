@@ -1,0 +1,22 @@
+  - id: portsindexup
+    main: ./cmd/portsindexup
+    binary: portsindexup
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    tags:
+      - static_build
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X main.version=v{{ .Version }}
+      - -X main.gitCommit={{ .ShortCommit }}
+      - -X main.makeBin=/usr/bin/make
+    goos:
+      - freebsd
+    goarch:
+      - 386
+      - amd64
+      - arm64

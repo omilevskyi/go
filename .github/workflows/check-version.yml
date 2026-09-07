@@ -27,7 +27,7 @@ jobs:
         run: |
           FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
           git --no-pager log -1 --no-color --pretty=%B >"${FILE}"
-          echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
+          echo "file=${FILE}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Verify if commit is conventional
         uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
@@ -45,4 +45,4 @@ jobs:
         run: |
           NEXT_VERSION=$(cog bump --auto --dry-run | \
             sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
-          echo "version=${NEXT_VERSION}" >>"${GITHUB_OUTPUT}"
+          echo "version=${NEXT_VERSION}" | tee --append "${GITHUB_OUTPUT}"

@@ -31,20 +31,21 @@ jobs:
             grep --extended-regexp '^v[[:digit:].]+$' |
             head --lines=1
           )
-          echo "version=${LAST_VERSION}" >>"${GITHUB_OUTPUT}"
+          echo "version=${LAST_VERSION}" | tee --append "${GITHUB_OUTPUT}"
 
       # Find applications in cmd/ whose Go sources or go.mod files have changed
       # since the last released version and expose them as the "apps" output.
       - name: Get changed applications
         id: changed
         run: |
-          APPS=$(
-            git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
+          set -o noglob
+          set -- $(
+            git --no-pager diff --no-color --name-only "v0.1.27...HEAD" |
             grep --invert-match --regexp='_test\.go$' |
             sed --silent --regexp-extended 's,^cmd/([^/]+).*(\.go|go\.mod)$,\1,p' |
             sort --unique
           )
-          echo "apps=${APPS}" >>"${GITHUB_OUTPUT}"
+          echo "apps=${*}" | tee --append "${GITHUB_OUTPUT}"
         env:
           LAST_VERSION: ${{ steps.last.outputs.version }}
 
@@ -56,9 +57,9 @@ jobs:
             git --no-pager diff --no-color --name-only "${LAST_VERSION}...HEAD" |
             grep --invert-match --regexp='_test\.go$' |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
-            echo 'altered=true' >>"${GITHUB_OUTPUT}"
+            echo altered=true | tee --append "${GITHUB_OUTPUT}"
           else
-            echo 'altered=false' >>"${GITHUB_OUTPUT}"
+            echo altered=false | tee --append "${GITHUB_OUTPUT}"
           fi
         env:
           APPS: ${{ steps.changed.outputs.apps }}
@@ -70,7 +71,7 @@ jobs:
         run: |
           FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
           git --no-pager log -1 --no-color --pretty=%B >"${FILE}"
-          echo "file=${FILE}" >>"${GITHUB_OUTPUT}"
+          echo "file=${FILE}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Verify if commit is conventional
         if: steps.go.outputs.altered == 'true'
@@ -91,7 +92,7 @@ jobs:
         run: |
           NEXT_VERSION=$(cog bump --auto --dry-run | \
             sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
-          echo "version=${NEXT_VERSION}" >>"${GITHUB_OUTPUT}"
+          echo "version=${NEXT_VERSION}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Setup Go
         if: steps.go.outputs.altered == 'true'
@@ -126,7 +127,7 @@ jobs:
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
           COSIGN_VERSION=$(head --lines=1 "${GITHUB_WORKSPACE}/.cosign-version")
-          echo "version=${COSIGN_VERSION}" >>"${GITHUB_OUTPUT}"
+          echo "version=${COSIGN_VERSION}" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Install Cosign ${{ steps.cosign.outputs.version }}
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
@@ -141,24 +142,47 @@ jobs:
           version: "~> v2"
           install-only: true
 
+      - name: Generate .goreleaser.yml
+        if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
+        id: goreleaser
+        run: |
+          FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
+          cat .goreleaser.yml >> "${FILE}"
+          echo builds: >> "${FILE}"
+          PRESENT_APPS=
+          for app in ${APPS}; do
+            file=".goreleaser/${app}-build.yml"
+            test -f "${file}" || continue
+            cat "${file}" >> "${FILE}"
+            PRESENT_APPS="${PRESENT_APPS} ${app}"
+          done
+          if [ -n "${PRESENT_APPS}" ]; then
+            echo archives: >> "${FILE}"
+            cat $(printf '.goreleaser/%s-archive.yml ' ${PRESENT_APPS}) >> "${FILE}"
+          fi
+          echo "file=${FILE}" | tee --append "${GITHUB_OUTPUT}"
+        env:
+          APPS: ${{ steps.changed.outputs.apps }}
+
       - name: Run GoReleaser
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
-          for app in ${APPS}; do
-            FILE=".goreleaser/${app}.yml"
-            test -f "${FILE}" || continue
-            goreleaser release --config "${FILE}" --clean
-          done
+          trap 'rm -rf -- '"${FILE}" INT HUP TERM EXIT
+          goreleaser release --config "${FILE}" --clean
         env:
           APPS: ${{ steps.changed.outputs.apps }}
+          FILE: ${{ steps.goreleaser.outputs.file }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
+        id: file
         run: |
-          for app in ${APPS}; do
-            gh release download "v${NEXT_VERSION}" --dir "${RUNNER_TEMP}" --pattern "${app}_${NEXT_VERSION}.sha256.sigstore.json"
-          done
+          CHECKSUM_FILE="CHECKSUM_${NEXT_VERSION}.sha256"
+          SIGSTORE_FILE="${CHECKSUM_FILE}.sigstore.json"
+          gh release download "v${NEXT_VERSION}" --dir "${RUNNER_TEMP}" --pattern "${SIGSTORE_FILE}"
+          echo "checksum=${CHECKSUM_FILE}" | tee --append "${GITHUB_OUTPUT}"
+          echo "sigstore=${RUNNER_TEMP}/${SIGSTORE_FILE}" | tee --append "${GITHUB_OUTPUT}"
         env:
           APPS: ${{ steps.changed.outputs.apps }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,13 +191,13 @@ jobs:
       - name: Verify bundle(s)
         if: steps.next.outputs.version != '' && steps.changed.outputs.apps != ''
         run: |
-          for app in ${APPS}; do
-            cosign verify-blob \
-              --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
-              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --bundle "${RUNNER_TEMP}/${app}_${NEXT_VERSION}.sha256.sigstore.json" \
-              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${app}_${NEXT_VERSION}.sha256"
-          done
+          cosign verify-blob \
+            --certificate-identity "${GITHUB_SERVER_URL}/${GITHUB_WORKFLOW_REF}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --bundle "${SIGSTORE_FILE}" \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/v${NEXT_VERSION}/${CHECKSUM_FILE}"
         env:
           APPS: ${{ steps.changed.outputs.apps }}
+          CHECKSUM_FILE: ${{ steps.file.outputs.checksum }}
           NEXT_VERSION: ${{ steps.next.outputs.version }}
+          SIGSTORE_FILE: ${{ steps.file.outputs.sigstore }}

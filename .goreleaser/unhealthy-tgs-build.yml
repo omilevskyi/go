@@ -1,0 +1,23 @@
+  - id: unhealthy-tgs
+    main: ./cmd/unhealthy-tgs
+    binary: unhealthy-tgs
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    tags:
+      - static_build
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .ShortCommit }}
+    goos:
+      - darwin
+      - freebsd
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64

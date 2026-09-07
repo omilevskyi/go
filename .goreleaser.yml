@@ -3,43 +3,11 @@
 version: 2
 
 # https://goreleaser.com/customization/project/
-project_name: obsolete-packages
+project_name: go
 
 before:
   hooks:
     - go mod tidy
-
-# https://goreleaser.com/customization/build/
-builds:
-  - id: "{{ .ProjectName }}"
-    main: "./cmd/{{ .ProjectName }}"
-    binary: "{{ .ProjectName }}"
-    env:
-      - CGO_ENABLED=0
-    mod_timestamp: "{{ .CommitTimestamp }}" # https://goreleaser.com/customization/templates/
-    tags:
-      - static_build
-    flags:
-      - -trimpath
-      - -buildvcs=false
-    ldflags:
-      - -s -w
-      - -X main.version=v{{ .Version }}
-      - -X main.gitCommit={{ .ShortCommit }}
-      - -X main.makeBin=/usr/bin/make
-    goos:
-      - freebsd
-    goarch:
-      - 386
-      - amd64
-      - arm64
-
-# https://goreleaser.com/customization/archive/
-archives:
-  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    strip_binary_directory: true
-    formats: ["zip"]
-    files: []
 
 # https://goreleaser.com/customization/changelog/
 changelog:
@@ -60,7 +28,7 @@ release:
 # https://goreleaser.com/customization/checksum/
 checksum:
   # algorithm: sha256 # default
-  name_template: "{{ .ProjectName }}_{{ .Version }}.sha256"
+  name_template: "CHECKSUM_{{ .Version }}.sha256"
 
 # https://goreleaser.com/customization/sign/sign/#signing-with-cosign
 signs:

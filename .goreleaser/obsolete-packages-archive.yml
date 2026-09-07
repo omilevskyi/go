@@ -1,0 +1,6 @@
+  - id: obsolete-packages
+    ids: [obsolete-packages]
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    strip_binary_directory: true
+    formats: ["zip"]
+    files: []

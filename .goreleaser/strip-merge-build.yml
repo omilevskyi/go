@@ -1,0 +1,20 @@
+  - id: strip-merge
+    main: ./cmd/strip-merge
+    binary: strip-merge
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    tags:
+      - static_build
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.gitCommit={{ .ShortCommit }}
+    goos:
+      - freebsd
+    goarch:
+      - amd64
+      - arm64

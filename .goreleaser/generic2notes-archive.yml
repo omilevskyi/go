@@ -1,0 +1,6 @@
+  - id: generic2notes
+    ids: [generic2notes]
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    strip_binary_directory: true
+    formats: ["zip"]
+    files: []
