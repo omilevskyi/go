@@ -46,7 +46,7 @@ func checkDiags(diags hcl.Diagnostics, w io.Writer, msg string, rc int) {
 	if diags.HasErrors() {
 		length := len(diags)
 		_, _ = fmt.Fprintf(w, "%s: %d diagnostic(s):\n\n", msg, length)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			_, _ = fmt.Fprintf(w, "%s: %s\n", diags[i].Summary, diags[i].Detail)
 		}
 		if rc > 0 {
