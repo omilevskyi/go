@@ -18,12 +18,11 @@ jobs:
           persist-credentials: "false"
           show-progress: "false"
 
-      - name: Get modified .go files compared to ${{ github.event.repository.default_branch }} branch
+      - name: Get altered flag compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           set -o pipefail
           if git --no-pager diff --no-color --name-only "origin/${DEFAULT_BRANCH}...HEAD" |
-            grep --invert-match --regexp='_test\.go$' |
             grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
             echo altered=true | tee --append "${GITHUB_OUTPUT}"
           else
@@ -36,6 +35,7 @@ jobs:
         if: steps.go.outputs.altered == 'true'
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
+          install-only: "true"
           version-file: .golangci-lint-version
 
       - name: Setup Go
@@ -50,6 +50,5 @@ jobs:
         if: steps.go.outputs.altered == 'true'
         run: go telemetry off
 
-      - name: Run tests
-        if: steps.go.outputs.altered == 'true'
-        run: go test -v ./...
+      - name: Run pre-commit
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
