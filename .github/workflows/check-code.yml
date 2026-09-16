@@ -1,4 +1,3 @@
----
 name: Check code
 
 on: pull_request
@@ -22,15 +21,25 @@ jobs:
         id: go
         run: |
           set -o pipefail
-          if git --no-pager diff --no-color --name-only "origin/${DEFAULT_BRANCH}...HEAD" |
-            grep --invert-match --regexp='_test\.go$' |
-            grep --silent --regexp='\.go$' --regexp='go\.mod$'; then
+          FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
+          git --no-pager diff --no-color --name-only "${GIT_DIFF}" |
+            sed --regexp-extended --silent 's,^(.*\.go)$,./\1,p' |
+            xargs dirname | sort --unique | tee "${FILE}"
+          set -o noglob
+          set -- $(wc --lines "${FILE}")
+          if [ "${1}" -gt 0 ]; then
             echo altered=true | tee --append "${GITHUB_OUTPUT}"
+            DIRS=$(find $(cat "${FILE}") -name '*_test.go' -type f |
+              xargs dirname | sort --unique | xargs)
+            echo "dirs=${DIRS}" | tee --append "${GITHUB_OUTPUT}"
           else
             echo altered=false | tee --append "${GITHUB_OUTPUT}"
+            echo dirs= | tee --append "${GITHUB_OUTPUT}"
           fi
+          rm --force -- "${FILE}"
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          # GIT_DIFF: "origin/${{ github.event.repository.default_branch }}...HEAD"
+          GIT_DIFF: "${{ github.event.pull_request.base.sha }}...HEAD"
 
       - name: golangci-lint
         if: steps.go.outputs.altered == 'true'
@@ -39,7 +48,7 @@ jobs:
           version-file: .golangci-lint-version
 
       - name: Setup Go
-        if: steps.go.outputs.altered == 'true'
+        if: steps.go.outputs.dirs != ''
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -47,9 +56,24 @@ jobs:
           cache: false
 
       - name: Disable Go telemetry
-        if: steps.go.outputs.altered == 'true'
+        if: steps.go.outputs.dirs != ''
         run: go telemetry off
 
       - name: Run tests
-        if: steps.go.outputs.altered == 'true'
-        run: go test -v ./...
+        if: steps.go.outputs.dirs != ''
+        run: |
+          set -o pipefail
+          FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
+          MODULE_PATH=$(go mod edit -json | jq --raw-output .Module.Path)
+          go work edit -json | jq --raw-output '.Use[].DiskPath | select(. != ".")' >"${FILE}"
+          go list ./... | sed --regexp-extended "s,^${MODULE_PATH},.," >>"${FILE}"
+          awk --field-separator=/ '{ print NF-1 "\t" $0 }' "${FILE}" |
+            sort --reverse --numeric-sort | cut --fields=2 | while read -r pkgdir; do
+              for dir in ${DIRS}; do
+                dir="${dir}/"
+                test "${dir#${pkgdir}/}" = "${dir}" || go test -C "${pkgdir}" ./...
+              done
+            done
+          rm --force -- "${FILE}"
+        env:
+          DIRS: ${{ steps.go.outputs.dirs }}
