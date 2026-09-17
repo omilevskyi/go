@@ -26,35 +26,26 @@ jobs:
       - name: Get last version
         id: last
         run: |
-          LAST_VERSION=$(
-            git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
+          LAST_VERSION=$(git --no-pager tag --no-color --list 'v*' --sort=-version:refname |
             grep --extended-regexp '^v[[:digit:].]+$' |
-            head --lines=1
-          )
+            head --lines=1)
           echo "version=${LAST_VERSION}" | tee --append "${GITHUB_OUTPUT}"
-
-      - name: Create temporary file
-        id: tmp
-        run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Get modified .go directories compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           set -o pipefail
-          git --no-pager diff --no-color --name-only "${GIT_EXPR}" |
+          DIRS=$(git --no-pager diff --no-color --name-only "${GIT_EXPR}" |
             grep --invert-match --regexp='_test\.go$' |
             sed --regexp-extended --silent 's,^(.*)/([^/]+\.go|go\.mod)$,./\1,p' |
-            sort --unique | tee "${FILE}"
-          set -o noglob
-          set -- $(wc --lines "${FILE}")
-          if [ "${1}" -gt 0 ]; then
-            echo "dirs=$(xargs < ${FILE})" | tee --append "${GITHUB_OUTPUT}"
-          else
-            echo dirs= | tee --append "${GITHUB_OUTPUT}"
-          fi
+            sort --unique | xargs)
+          echo "dirs=${DIRS}" | tee --append "${GITHUB_OUTPUT}"
         env:
           GIT_EXPR: "${{ steps.last.outputs.version }}...HEAD"
-          FILE: ${{ steps.tmp.outputs.file }}
+
+      - name: Create temporary file
+        id: tmp
+        run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
 
       - name: Save commit message to file
         if: steps.go.outputs.dirs != ''
@@ -73,7 +64,7 @@ jobs:
         id: next
         if: steps.go.outputs.dirs != ''
         run: |
-          NEXT_VERSION=$(cog bump --auto --dry-run | \
+          NEXT_VERSION=$(cog bump --auto --dry-run |
             sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
           echo "version=${NEXT_VERSION}" | tee --append "${GITHUB_OUTPUT}"
 
@@ -102,10 +93,10 @@ jobs:
               ); do
             for dir in ${DIRS}; do
               dir="${dir}/"
-              test "${dir#${cmdir}/}" = "${dir}" || apps="${apps}${apps:+ }$(basename ${cmdir})"
+              test "${dir#${cmdir}/}" = "${dir}" || APPS="${APPS}${APPS:+ }${cmdir##*/}"
             done
           done
-          echo "apps=${apps}" | tee --append "${GITHUB_OUTPUT}"
+          echo "apps=${APPS}" | tee --append "${GITHUB_OUTPUT}"
         env:
           DIRS: ${{ steps.go.outputs.dirs }}
 
@@ -171,7 +162,7 @@ jobs:
             file=".goreleaser/${app}-build.yml"
             test -f "${file}" || continue
             cat "${file}" >> "${FILE}"
-            PRESENT_APPS="${PRESENT_APPS} ${app}"
+            PRESENT_APPS="${PRESENT_APPS}${PRESENT_APPS:+ }${app}"
           done
           if [ -n "${PRESENT_APPS}" ]; then
             echo archives: >> "${FILE}"
