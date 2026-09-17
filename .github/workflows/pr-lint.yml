@@ -17,23 +17,16 @@ jobs:
           persist-credentials: "false"
           show-progress: "false"
 
-      - name: Get modified .go directories compared to ${{ github.event.repository.default_branch }} branch
+      - name: Get number of modified .go files compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
-          set -o pipefail
-          FILE=$(mktemp --tmpdir="${RUNNER_TEMP}")
-          gh pr view "${PR}" --json files --jq '.files[].path' |
-            grep --invert-match --regexp='_test\.go$' |
-            sed --regexp-extended --silent 's,^(.*)/[^/]+\.go$,./\1,p' |
-            sort --unique | tee "${FILE}"
-          set -o noglob
-          set -- $(wc --lines "${FILE}")
-          if [ "${1}" -gt 0 ]; then
+          if gh pr view "${PR}" --json files --jq '.files[].path' |
+              grep --invert-match --regexp='_test\.go$' |
+              grep --count --regexp='\.go$'; then
             echo altered=true | tee --append "${GITHUB_OUTPUT}"
           else
             echo altered=false | tee --append "${GITHUB_OUTPUT}"
           fi
-          rm --force -- "${FILE}"
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
