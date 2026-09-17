@@ -44,6 +44,7 @@ jobs:
           GIT_EXPR: "${{ steps.last.outputs.version }}...HEAD"
 
       - name: Create temporary file
+        if: steps.go.outputs.dirs != ''
         id: tmp
         run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
 
@@ -61,8 +62,8 @@ jobs:
           args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.tmp.outputs.file }}
 
       - name: Get next version
-        id: next
         if: steps.go.outputs.dirs != ''
+        id: next
         run: |
           NEXT_VERSION=$(cog bump --auto --dry-run |
             sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
@@ -180,6 +181,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove temporary file
+        if: steps.go.outputs.dirs != ''
         run: rm --force -- "${FILE}"
         env:
           FILE: ${{ steps.tmp.outputs.file }}
