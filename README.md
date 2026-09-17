@@ -7,7 +7,7 @@
 ## Verification of the authenticity
 
 ```sh
-export VERSION=0.1.2
+export VERSION=0.1.29
 cosign verify-blob \
   --certificate-identity https://github.com/omilevskyi/go/.github/workflows/release.yml@refs/heads/main \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \

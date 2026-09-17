@@ -17,4 +17,3 @@
       - freebsd
     goarch:
       - amd64
-      - arm64
