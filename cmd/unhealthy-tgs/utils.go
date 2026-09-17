@@ -26,6 +26,8 @@ const (
 	epSep = ':'
 )
 
+// Trigger update
+
 var (
 	loadConfig   = config.LoadDefaultConfig
 	newElbClient = elasticloadbalancingv2.NewFromConfig
