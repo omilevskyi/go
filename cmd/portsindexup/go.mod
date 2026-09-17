@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/mattn/go-isatty v0.0.24
-	github.com/omilevskyi/go v0.1.28
+	github.com/omilevskyi/go v0.1.30
 	golang.org/x/sys v0.48.0
 )
 

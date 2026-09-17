@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/hashicorp/hcl/v2 v2.25.0
-	github.com/omilevskyi/go v0.1.28
+	github.com/omilevskyi/go v0.1.30
 )
 
 require (
