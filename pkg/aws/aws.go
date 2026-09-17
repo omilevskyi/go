@@ -7,8 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 )
 
-// Triger release
-
 // DescribeLoadBalancers hides ELBv2 pagination and returns all load balancers
 // as a single slice.
 func DescribeLoadBalancers(ctx context.Context, c *elasticloadbalancingv2.Client) ([]types.LoadBalancer, error) {
