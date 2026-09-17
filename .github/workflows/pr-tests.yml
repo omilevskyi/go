@@ -1,4 +1,4 @@
-name: Check PR
+name: Run tests
 
 on: pull_request
 
@@ -6,15 +6,14 @@ permissions:
   contents: read
 
 jobs:
-  check-pr:
+  go-test:
     runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }} # pick PR's HEAD instead of merge commit
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: "false"
           show-progress: "false"
 
@@ -22,52 +21,26 @@ jobs:
         id: tmp
         run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
 
-      - name: Get modified .go files compared to ${{ github.event.repository.default_branch }} branch
+      - name: Get modified .go directories compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           set -o pipefail
-          git --no-pager diff --no-color --name-only "${GIT_EXPR}" |
+          gh pr view "${PR}" --json files --jq '.files[].path' |
             sed --regexp-extended --silent 's,^(.*)/[^/]+\.go$,./\1,p' |
             sort --unique | tee "${FILE}"
           set -o noglob
           set -- $(wc --lines "${FILE}")
           if [ "${1}" -gt 0 ]; then
-            echo altered=true | tee --append "${GITHUB_OUTPUT}"
             DIRS=$(find $(cat "${FILE}") -name '*_test.go' -type f |
               xargs dirname | sort --unique | xargs)
             echo "dirs=${DIRS}" | tee --append "${GITHUB_OUTPUT}"
           else
-            echo altered=false | tee --append "${GITHUB_OUTPUT}"
             echo dirs= | tee --append "${GITHUB_OUTPUT}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-          GIT_EXPR: "${{ github.event.pull_request.base.sha }}...HEAD"
           FILE: ${{ steps.tmp.outputs.file }}
-
-      - name: Save commit message to file
-        run: git --no-pager log -1 --no-color --pretty=%B | tee "${FILE}"
-        env:
-          FILE: ${{ steps.tmp.outputs.file }}
-
-      - name: Verify if commit is conventional
-        uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
-        with:
-          command: verify
-          args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.tmp.outputs.file }}
-
-      - name: Get next version
-        id: next
-        run: |
-          NEXT_VERSION=$(cog bump --auto --dry-run | \
-            sed --silent --regexp-extended 's/^v([[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+)$/\1/p')
-          echo "version=${NEXT_VERSION}" | tee --append "${GITHUB_OUTPUT}"
-
-      - name: golangci-lint
-        if: steps.go.outputs.altered == 'true'
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          version-file: .golangci-lint-version
+          PR: ${{ github.event.pull_request.number }}
 
       - name: Setup Go
         if: steps.go.outputs.dirs != ''
