@@ -19,6 +19,8 @@ const (
 	gitFsEntry   = ".git"
 )
 
+// Trigger update
+
 // Quote character for TrimQQ() and EnQQ()
 var (
 	Quote       byte = '"'
