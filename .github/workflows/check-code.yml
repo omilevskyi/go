@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: "false"
           show-progress: "false"
 
@@ -22,9 +22,9 @@ jobs:
         run: |
           set -o pipefail
           FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
-          git --no-pager diff --no-color --name-only "${GIT_DIFF}" |
-            sed --regexp-extended --silent 's,^(.*\.go)$,./\1,p' |
-            xargs dirname | sort --unique | tee "${FILE}"
+          gh pr view "${PR}" --json files --jq '.files[].path' |
+            sed --regexp-extended --silent 's,^(.*)/[^/]+\.go$,./\1,p' |
+            sort --unique | tee "${FILE}"
           set -o noglob
           set -- $(wc --lines "${FILE}")
           if [ "${1}" -gt 0 ]; then
@@ -38,8 +38,8 @@ jobs:
           fi
           rm --force -- "${FILE}"
         env:
-          # GIT_DIFF: "origin/${{ github.event.repository.default_branch }}...HEAD"
-          GIT_DIFF: "${{ github.event.pull_request.base.sha }}...HEAD"
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
 
       - name: golangci-lint
         if: steps.go.outputs.altered == 'true'
