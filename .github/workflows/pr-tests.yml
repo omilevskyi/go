@@ -17,29 +17,24 @@ jobs:
           persist-credentials: "false"
           show-progress: "false"
 
-      - name: Create temporary file
-        id: tmp
-        run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
-
       - name: Get modified .go directories compared to ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           set -o pipefail
-          gh pr view "${PR}" --json files --jq '.files[].path' |
+          DIRS=$(gh pr view "${PR}" --json files --jq '.files[].path' |
             sed --regexp-extended --silent 's,^(.*)/[^/]+\.go$,./\1,p' |
-            sort --unique | tee "${FILE}"
-          set -o noglob
-          set -- $(wc --lines "${FILE}")
-          if [ "${1}" -gt 0 ]; then
-            DIRS=$(find $(cat "${FILE}") -name '*_test.go' -type f |
-              xargs dirname | sort --unique | xargs)
-            echo "dirs=${DIRS}" | tee --append "${GITHUB_OUTPUT}"
-          else
-            echo dirs= | tee --append "${GITHUB_OUTPUT}"
+            sort --unique | xargs)
+          if [ -n "${DIRS}" ]; then
+            TEST_FILES=$(find ${DIRS} -name '*_test.go' -type f | xargs)
+            if [ -n "${TEST_FILES}" ]; then
+              DIRS=$(dirname ${TEST_FILES} | sort --unique | xargs)
+              echo "dirs=${DIRS}" | tee --append "${GITHUB_OUTPUT}"
+              exit 0
+            fi
           fi
+          echo dirs= | tee --append "${GITHUB_OUTPUT}"
         env:
           GH_TOKEN: ${{ github.token }}
-          FILE: ${{ steps.tmp.outputs.file }}
           PR: ${{ github.event.pull_request.number }}
 
       - name: Setup Go
@@ -58,6 +53,8 @@ jobs:
         if: steps.go.outputs.dirs != ''
         run: |
           set -o pipefail
+          FILE=$(mktemp --tmpdir="${RUNNER_TEMP}")
+          trap "rm --force -- ${FILE}" INT HUP TERM EXIT
           MODULE_PATH=$(go mod edit -json | jq --raw-output .Module.Path)
           go work edit -json | jq --raw-output '.Use[].DiskPath | select(. != ".")' >"${FILE}"
           go list ./... | sed --regexp-extended "s,^${MODULE_PATH},.," >>"${FILE}"
@@ -70,9 +67,4 @@ jobs:
             done
         env:
           DIRS: ${{ steps.go.outputs.dirs }}
-          FILE: ${{ steps.tmp.outputs.file }}
-
-      - name: Remove temporary file
-        run: rm --force -- "${FILE}"
-        env:
           FILE: ${{ steps.tmp.outputs.file }}
