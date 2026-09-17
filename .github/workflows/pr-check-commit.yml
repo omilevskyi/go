@@ -1,17 +1,13 @@
----
-name: Check version
+name: Check that commit is conventional
 
-on:
-  push:
-    branches-ignore:
-      - main
+on: pull_request
 
 permissions:
   contents: read
 
 jobs:
-  check-version:
-    runs-on: ubuntu-24.04
+  get-next-version:
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
@@ -22,23 +18,25 @@ jobs:
           persist-credentials: "false"
           show-progress: "false"
 
+      - name: Create temporary file
+        id: tmp
+        run: echo "file=$(mktemp --tmpdir=${RUNNER_TEMP})" | tee --append "${GITHUB_OUTPUT}"
+
       - name: Save commit message to file
-        id: commit
-        run: |
-          FILE=$(mktemp --tmpdir=${RUNNER_TEMP})
-          git --no-pager log -1 --no-color --pretty=%B >"${FILE}"
-          echo "file=${FILE}" | tee --append "${GITHUB_OUTPUT}"
+        run: git --no-pager log -1 --no-color --pretty=%B | tee "${FILE}"
+        env:
+          FILE: ${{ steps.tmp.outputs.file }}
 
       - name: Verify if commit is conventional
         uses: cocogitto/cocogitto-action@52d0023b4396897f1815648e553db2ab8d782f3a # v4.2.0
         with:
           command: verify
-          args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.commit.outputs.file }}
+          args: --ignore-merge-commits --ignore-fixup-commits --file ${{ steps.tmp.outputs.file }}
 
       - name: Remove temporary file
         run: rm --force -- "${FILE}"
         env:
-          FILE: ${{ steps.commit.outputs.file }}
+          FILE: ${{ steps.tmp.outputs.file }}
 
       - name: Get next version
         id: next
