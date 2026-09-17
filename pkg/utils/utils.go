@@ -19,6 +19,8 @@ const (
 	gitFsEntry   = ".git"
 )
 
+// Trigger new tag
+
 // Quote character for TrimQQ() and EnQQ()
 var (
 	Quote       byte = '"'
