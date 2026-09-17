@@ -3,7 +3,7 @@ module github.com/omilevskyi/go/strip-merge
 go 1.27
 
 require (
-	github.com/hashicorp/hcl/v2 v2.24.0
+	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/omilevskyi/go v0.1.28
 )
 
@@ -16,8 +16,8 @@ require (
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
 )
 
 replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.26
