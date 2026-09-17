@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/hashicorp/hcl/v2 v2.25.0
-	github.com/omilevskyi/go v0.1.30
+	github.com/omilevskyi/go v0.1.31
 )
 
 require (
@@ -20,4 +20,4 @@ require (
 	golang.org/x/tools v0.50.0 // indirect
 )
 
-replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.29
+replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.31

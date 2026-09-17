@@ -9,7 +9,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/go-openapi/testify/v2 v2.8.0
 	github.com/mattn/go-isatty v0.0.24
-	github.com/omilevskyi/go v0.1.30
+	github.com/omilevskyi/go v0.1.31
 	golang.org/x/sync v0.23.0
 )
 
@@ -29,4 +29,4 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 )
 
-replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.29
+replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.31
