@@ -6,6 +6,7 @@
 coverage.*
 Makefile
 Makefile.local
+go.work.sum
 vendor/
 generic2notes/generic2notes
 obsolete-packages/obsolete-packages
