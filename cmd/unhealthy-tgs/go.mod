@@ -29,4 +29,4 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 )
 
-replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.26
+replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.29
