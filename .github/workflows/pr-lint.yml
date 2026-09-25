@@ -22,7 +22,7 @@ jobs:
         run: |
           if gh pr view "${PR}" --json files --jq '.files[].path' |
               grep --invert-match --regexp='_test\.go$' |
-              grep --count --regexp='\.go$'; then
+              grep --silent --regexp='\.go$'; then
             echo altered=true | tee --append "${GITHUB_OUTPUT}"
           else
             echo altered=false | tee --append "${GITHUB_OUTPUT}"
