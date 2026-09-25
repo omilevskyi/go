@@ -35,7 +35,6 @@ jobs:
       - name: Get modified .go directories compared to ${{ steps.last.outputs.version }}
         id: go
         run: |
-          set -o pipefail
           DIRS=$(git --no-pager diff --no-color --name-only "${GIT_EXPR}" |
             grep --invert-match --regexp='_test\.go$' |
             sed --regexp-extended --silent 's,^(.*)/([^/]+\.go|go\.mod)$,./\1,p' |
