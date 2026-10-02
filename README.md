@@ -8,6 +8,8 @@
 
 ```sh
 export VERSION=0.1.32
+curl --fail --show-error --silent --location --remote-name \
+  "https://github.com/omilevskyi/go/releases/download/v${VERSION}/CHECKSUM_${VERSION}.sha256.sigstore.json"
 cosign verify-blob \
   --certificate-identity https://github.com/omilevskyi/go/.github/workflows/release.yml@refs/heads/main \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
