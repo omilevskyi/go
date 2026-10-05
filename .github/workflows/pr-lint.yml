@@ -17,7 +17,7 @@ jobs:
           persist-credentials: "false"
           show-progress: "false"
 
-      - name: Get modified .go files compared to ${{ github.event.repository.default_branch }} branch
+      - name: Check if Go code changed since ${{ github.event.repository.default_branch }} branch
         id: go
         run: |
           if gh pr view "${PR}" --json files --jq '.files[].path' |
