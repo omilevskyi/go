@@ -31,7 +31,7 @@ jobs:
             head --lines=1)
           echo "version=${LAST_VERSION}" | tee --append "${GITHUB_OUTPUT}"
 
-      - name: Get modified .go directories compared to ${{ steps.last.outputs.version }}
+      - name: Find Go directories changed since ${{ steps.last.outputs.version }}
         id: go
         run: |
           DIRS=$(git --no-pager diff --no-color --name-only "${GIT_EXPR}" |
