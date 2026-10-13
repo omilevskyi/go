@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/hashicorp/hcl/v2 v2.25.0
-	github.com/omilevskyi/go v0.1.31
+	github.com/omilevskyi/go v0.1.36
 )
 
 require (
@@ -14,10 +14,10 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 )
 
 replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.31
