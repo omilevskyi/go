@@ -10,7 +10,7 @@ require (
 	github.com/go-openapi/testify/v2 v2.8.0
 	github.com/mattn/go-isatty v0.0.24
 	github.com/omilevskyi/go v0.1.31
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
