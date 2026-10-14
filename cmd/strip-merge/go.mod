@@ -20,4 +20,4 @@ require (
 	golang.org/x/tools v0.52.0 // indirect
 )
 
-replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.31
+replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.36
