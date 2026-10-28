@@ -2,7 +2,7 @@ module github.com/omilevskyi/go
 
 go 1.27
 
-require github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.4
+require github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.5
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.4 // indirect
