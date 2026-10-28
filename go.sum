@@ -4,7 +4,7 @@ github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.7 h1:fSNAt6hs4qLjb9tMZc
 github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.7/go.mod h1:TMav+EuXQu5kNpZZz/6rIC8xx4mCsW+6AKHrjvOSAsE=
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.7 h1:7NS6kqBjkWIN8P/AEdmtyq6eQGAhN1oHTZdzXclpH6Y=
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.7/go.mod h1:1PFqtAUsIgF1nEVojzRJSf/v88zjzqrGW+w+UAtkXyQ=
-github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.4 h1:qa8fXvHzJOsDTGq0qbOlPUOlAlfKZhO6HqP9Be1Uhxg=
-github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.4/go.mod h1:/RWcczQydYEz7bgdeC3BoNAL3KZdQFT5NTk574Gz8uI=
+github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.5 h1:3sAt3lnJWHsw/rPhBm5j6dQ/1GvJBMoHI/AKgwTWeuk=
+github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.5/go.mod h1:qRxENos9km3qyj6yyiP4sIUUk7rK+kMabeA4uGvi314=
 github.com/aws/smithy-go v1.28.6 h1:Pj+/sUviNYjow8ELRtNwKHZ9ECeF+7pATX3+shjLIrw=
 github.com/aws/smithy-go v1.28.6/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
