@@ -2,6 +2,6 @@ module github.com/omilevskyi/go/generic2notes
 
 go 1.27
 
-require github.com/omilevskyi/go v0.1.36
+require github.com/omilevskyi/go v0.1.42
 
 replace github.com/omilevskyi/go => github.com/omilevskyi/go v0.1.36
