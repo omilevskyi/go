@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.65.0
 	github.com/go-jose/go-jose/v4 v4.1.9
-	github.com/go-openapi/testify/v2 v2.8.0
+	github.com/go-openapi/testify/v2 v2.8.1
 	github.com/mattn/go-isatty v0.0.24
 	github.com/omilevskyi/go v0.1.42
 	golang.org/x/sync v0.25.0
