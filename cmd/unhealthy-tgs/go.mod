@@ -3,7 +3,7 @@ module github.com/omilevskyi/go/unhealthy-tgs
 go 1.27
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.47.7
+	github.com/aws/aws-sdk-go-v2 v1.47.8
 	github.com/aws/aws-sdk-go-v2/config v1.33.13
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.63.8
 	github.com/go-jose/go-jose/v4 v4.1.9
